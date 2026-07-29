@@ -39,10 +39,6 @@ The goals of this project were:
 
 - Ubuntu Linux
 
-## Virtualization
-
-- Oracle VirtualBox
-
 ## System Role
 
 - Linux workstation/server environment used to simulate an employee endpoint
