@@ -1,99 +1,72 @@
-# New Employee Onboarding & Endpoint Security Hardening Lab
+# New Employee Onboarding & Endpoint Security Hardening
 
-## Overview
+## Project Overview
 
-This project simulates a real-world IT Help Desk task of preparing a Windows workstation for a newly hired employee. The objective is to configure the device according to company security standards, create the employee account, install required business applications, and verify that the endpoint complies with organizational security policies.
+## Business Scenario
 
-This lab was completed as part of my IT Support and Systems Administration learning path using the Ubuntu Tech Solutions virtual company environment.
+BarberPro Studios LLC is a growing business that requires a structured IT onboarding process for new employees.
 
----
+As a Junior IT Support Technician, my responsibility was to prepare a new employee environment by:
 
-## Objectives
+- Creating user accounts
+- Configuring access permissions
+- Securing the endpoint environment
+- Verifying system readiness
+- Documenting the onboarding process
 
-* Prepare a Windows workstation for a new employee.
-* Create and configure a local user account.
-* Apply Windows security best practices.
-* Install required business software.
-* Configure endpoint protection features.
-* Verify Windows Update compliance.
-* Document all deployment activities.
+This project simulates a real-world Help Desk ticket involving employee provisioning and endpoint security.
 
----
-
-## Scenario
-
-Ubuntu Tech Solutions has hired a new employee, **Sarah Johnson**, as a Junior Cloud Support Specialist.
-
-As an IT Support Technician, I was responsible for provisioning her Windows workstation before deployment. This included creating the employee account, securing the operating system, installing company-approved software, organizing the required folder structure, and verifying that the device met company security standards.
 
 ---
 
-## Technologies Used
+# Objectives
 
-* Windows 11
-* Windows Security (Microsoft Defender)
-* Windows Firewall
-* BitLocker (where supported)
-* Local Users and Groups
-* Windows Update
-* Google Chrome
-* Visual Studio Code
-* 7-Zip
-* Adobe Acrobat Reader
+The goals of this project were:
 
----
+- Create and manage Linux user accounts
+- Assign users to appropriate groups
+- Configure file and directory permissions
+- Apply basic endpoint security practices
+- Verify user access and system configuration
+- Document the onboarding process using IT support procedures
 
-## Skills Demonstrated
-
-* User account administration
-* Endpoint security hardening
-* Windows system configuration
-* Software deployment
-* Security policy implementation
-* Device provisioning
-* Technical documentation
-* IT Help Desk workflows
 
 ---
 
-## Project Structure
+# Environment
 
-```text
-new-employee-onboarding-lab/
-├── README.md
-├── screenshots/
-├── docs/
-└── assets/
-```
+## Operating System
 
----
+- Ubuntu Linux
 
-## Documentation
+## System Role
 
-The project includes:
+- Linux workstation/server environment used to simulate an employee endpoint
 
-* Deployment checklist
-* Endpoint security verification
-* Screenshots of completed tasks
-* Troubleshooting notes
-* Configuration documentation
 
 ---
 
-## Learning Outcomes
+# Tools Used
 
-After completing this lab, I gained hands-on experience with common responsibilities performed by IT Support professionals during employee onboarding. The project strengthened my understanding of Windows administration, endpoint security, software deployment, and documenting technical work using industry-style practices.
+## Operating System Tools
 
----
+### Linux Terminal
 
-## Future Improvements
+Used for:
 
-Future versions of this lab may include:
+- User creation
+- Group management
+- File permissions
+- System administration
 
-* Active Directory user provisioning
-* Microsoft Intune device enrollment
-* Microsoft Entra ID integration
-* Microsoft 365 account provisioning
-* Group Policy configuration
-* PowerShell automation for onboarding tasks
-* Automated software deployment using package managers
+
+### User Management Commands
+
+Commands practiced:
+
+```bash
+adduser
+usermod
+passwd
+groups
+id
