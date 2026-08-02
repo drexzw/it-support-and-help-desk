@@ -31,7 +31,7 @@ Skills demonstrated:
 - chown
 
 
-## In Progress
+## Completed
 
 ### 02. New Employee Onboarding & Endpoint Security Hardening
 
