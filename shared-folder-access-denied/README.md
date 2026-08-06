@@ -89,7 +89,7 @@ Additional documentation for this project:
 
 - Support Ticket Documentation:
 
-  [View Support-Ticket.md](./Support-Ticket.md)
+  https://github.com/drexzw/it-support-and-help-desk/blob/main/shared-folder-access-denied/support-ticket.md
 
 ---
 
