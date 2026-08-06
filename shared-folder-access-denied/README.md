@@ -85,7 +85,7 @@ Additional documentation for this project:
 
 - Commands Used:
 
-  [View Commands.md](./Commands.md)
+  https://github.com/drexzw/it-support-and-help-desk/blob/main/shared-folder-access-denied/commands.md
 
 - Support Ticket Documentation:
 
