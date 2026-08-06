@@ -81,7 +81,7 @@ Additional documentation for this project:
 
 - Screenshots:
   
-  [View Screenshots](./screenshots)
+  https://github.com/drexzw/it-support-and-help-desk/tree/main/shared-folder-access-denied/screenshots
 
 - Commands Used:
 
