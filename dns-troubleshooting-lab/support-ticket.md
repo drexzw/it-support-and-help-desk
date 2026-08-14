@@ -2,13 +2,13 @@
 
 ## Ticket Information
 
-| Field       | Information                |
-| ----------- | -------------------------- |
-| Ticket ID   | `DNS-001`                  |
-| Priority    | Medium                     |
-| Category    | Network Connectivity / DNS |
-| Environment | Windows Server 2022 EC2    |
-| Status      | Resolved                   |
+| Field       | Information                 |
+| ----------- | ---------------------------- |
+| Ticket ID   | `DNS-001`                    |
+| Priority    | Medium                        |
+| Category    | Network Connectivity / DNS   |
+| Environment | Windows Server 2022 EC2      |
+| Status      | Resolved                      |
 
 ## User Report
 
@@ -16,27 +16,28 @@
 
 ## Initial Assessment
 
-The reported symptom appeared to indicate an internet connectivity problem.
-
-Rather than immediately changing the network configuration, connectivity was tested progressively to determine which layer was failing.
+The reported symptom sounded like a general internet connectivity problem. Rather than changing any network settings immediately, connectivity was tested layer by layer to find out exactly where it was failing.
 
 ## Troubleshooting Performed
 
-### 1. Checked IP Configuration
+### 1. Checked Network Configuration
 
 ```powershell
-ipconfig
+ipconfig /all
 ```
 
-The workstation had a valid IPv4 configuration:
+![ipconfig /all showing a valid, working configuration](screenshots/04-working-dns-configuration.png)
+
+**Result:**
 
 ```text
 IPv4 Address:     172.31.33.17
 Subnet Mask:      255.255.240.0
 Default Gateway:  172.31.32.1
+DNS Server:       172.31.0.2
 ```
 
-**Finding:** IP configuration appeared valid.
+**Finding:** IP configuration and DNS server assignment were both valid.
 
 ### 2. Tested Default Gateway
 
@@ -44,15 +45,9 @@ Default Gateway:  172.31.32.1
 ping 172.31.32.1
 ```
 
-**Result:**
+**Result:** 4 packets sent, 4 received, 0% loss. *(Performed as part of the baseline check; not separately screenshotted.)*
 
-```text
-4 packets sent
-4 packets received
-0 packets lost
-```
-
-**Finding:** The workstation could communicate with its default gateway.
+**Finding:** The workstation could reach its default gateway.
 
 ### 3. Tested Internet Connectivity Without DNS
 
@@ -60,205 +55,102 @@ ping 172.31.32.1
 ping 8.8.8.8
 ```
 
-**Result:**
+**Result:** 4 packets sent, 4 received, 0% loss. *(Performed as part of the baseline check; not separately screenshotted.)*
 
-```text
-4 packets sent
-4 packets received
-0 packets lost
-```
+**Finding:** Internet connectivity was working independent of DNS, since this test used a raw IP rather than a hostname.
 
-**Finding:** Internet connectivity was working.
-
-Because the test used an IP address rather than a hostname, it did not depend on DNS resolution.
-
-### 4. Tested DNS Resolution
+### 4. Tested DNS Resolution and Hostname Connectivity
 
 ```powershell
 nslookup google.com
-```
-
-The initial query successfully returned Google's IP addresses.
-
-**Finding:** DNS was functioning during the baseline test.
-
-### 5. Tested Hostname Connectivity
-
-```powershell
 ping google.com
 ```
 
-**Result:**
+**Result:** Both succeeded at baseline. *(Not separately screenshotted — confirmed working before the failure was intentionally introduced below.)*
 
-```text
-4 packets sent
-4 packets received
-0 packets lost
-```
-
-**Finding:** Hostname resolution and connectivity were working normally.
+**Finding:** DNS and hostname connectivity were both functioning normally before the incident was simulated.
 
 ## Controlled Failure Simulation
 
-A DNS failure was intentionally introduced to simulate a real troubleshooting incident.
-
-Original DNS server:
-
-```text
-172.31.0.2
-```
-
-Testing DNS server:
-
-```text
-192.0.2.1
-```
-
-Command used:
+To reproduce a DNS incident under controlled conditions, the DNS server was intentionally pointed at an unreachable address:
 
 ```powershell
 Set-DnsClientServerAddress -InterfaceIndex 8 -ServerAddresses 192.0.2.1
 ```
 
-The change was verified with:
-
-```powershell
-Get-DnsClientServerAddress -InterfaceIndex 8
-```
+`192.0.2.0/24` is reserved for documentation/testing (RFC 5737) and will never respond, making the failure reliable to reproduce.
 
 ## Failure Reproduction
 
-### Internet Connectivity
-
-```powershell
-ping 8.8.8.8
-```
-
-**Result:**
-
-```text
-4 packets sent
-4 packets received
-0 packets lost
-```
-
-**Finding:** Internet connectivity remained functional.
-
-### Hostname Resolution
-
 ```powershell
 ping google.com
-```
-
-**Result:**
-
-```text
-Ping request could not find host google.com.
-```
-
-**Finding:** Hostname resolution failed.
-
-### DNS Query
-
-```powershell
 nslookup google.com
 ```
 
-**Result:** The DNS request timed out.
+![Hostname ping and DNS query both failing against the unreachable server](screenshots/05-dns-resolution-failure.png)
 
-**Finding:** The configured DNS server was not successfully responding to DNS queries.
+**Results:**
+
+* `ping google.com` → `Ping request could not find host google.com.`
+* `nslookup google.com` → DNS request timed out, querying `192.0.2.1`
+
+**Finding:** The configured DNS server was not responding, and hostname resolution failed as a direct result.
 
 ## Root Cause
 
-The workstation was configured to use an invalid/unreachable DNS server:
+The workstation was configured to use an invalid/unreachable DNS server (`192.0.2.1`). The underlying network connection remained fully operational — the failure was isolated entirely to DNS resolution.
 
-```text
-192.0.2.1
-```
-
-The underlying network connection remained operational, but DNS resolution failed.
-
-| Test                        | Result |
-| --------------------------- | ------ |
-| IP configuration            | PASS   |
-| Gateway connectivity        | PASS   |
-| Internet connectivity by IP | PASS   |
-| DNS resolution              | FAIL   |
-| Hostname connectivity       | FAIL   |
-
-The issue was isolated to DNS resolution.
+| Test                          | Result       | Evidence                 |
+| ------------------------------ | ------------ | -------------------------- |
+| IP configuration                | PASS         | Screenshot 04              |
+| Gateway connectivity            | PASS         | Performed, not pictured    |
+| Internet connectivity by IP     | PASS         | Performed, not pictured    |
+| DNS resolution                  | FAIL         | Screenshot 05              |
+| Hostname connectivity           | FAIL         | Screenshot 05              |
 
 ## Resolution
 
-The original DNS server was restored:
-
 ```powershell
 Set-DnsClientServerAddress -InterfaceIndex 8 -ServerAddresses 172.31.0.2
-```
-
-The configuration was verified:
-
-```powershell
 Get-DnsClientServerAddress -InterfaceIndex 8
-```
-
-DNS resolution was tested:
-
-```powershell
 nslookup google.com
-```
-
-The original user-facing symptom was then tested:
-
-```powershell
 ping google.com
 ```
 
-**Final Result:**
+![DNS restored, verified, and resolution confirmed working](screenshots/06-dns-resolution-restored.png)
 
-```text
-4 packets sent
-4 packets received
-0 packets lost
-```
+**Final Result:** `Get-DnsClientServerAddress` confirms `172.31.0.2` restored on interface 8; `nslookup` resolves successfully; `ping google.com` returns 4 packets sent, 4 received, 0% loss.
 
 ## Resolution Summary
 
-**Root Cause:** Incorrect DNS server configuration.
+**Root Cause:** Incorrect DNS server configuration on the network adapter.
 
-**Resolution:** Restored the original working DNS server.
+**Resolution:** Restored the original working DNS server (`172.31.0.2`) on interface 8.
 
-**Verification:** Successful DNS resolution and hostname connectivity.
+**Verification:** Confirmed via `Get-DnsClientServerAddress`, a successful `nslookup`, and a successful `ping google.com`.
 
 **Final Status:** Resolved
 
 ## Technician Notes
 
-The issue was isolated by comparing IP-based connectivity with hostname-based connectivity.
-
-The workstation retained internet connectivity after the DNS configuration was changed.
-
-This demonstrated that:
+The issue was isolated by comparing IP-based connectivity against hostname-based connectivity. The workstation kept working internet access after DNS was broken, which confirmed:
 
 ```text
 Network connectivity ≠ DNS connectivity
 ```
 
-A DNS failure can prevent users from accessing resources by hostname even when the underlying network and internet connection are functioning normally.
+A DNS failure can block hostname-based access to everything — internal and external — even while the underlying network connection is completely healthy. That distinction is what keeps a technician from making unnecessary changes to the wrong layer.
 
 ## Recommended Follow-Up
 
-In a production environment, the technician should determine why the incorrect DNS server was configured before closing the incident.
+In a production environment, before closing this ticket I'd want to know *why* the DNS server got misconfigured in the first place — this lab only simulated the symptom, not a real root cause. Areas worth checking:
 
-Potential areas for investigation include:
-
-* DHCP configuration
-* Network adapter configuration
-* VPN configuration
-* Organizational DNS policies
-* Active Directory DNS
-* DNS server availability
-* Recent network configuration changes
+* DHCP configuration (was this pushed by DHCP or set manually?)
+* Network adapter configuration drift
+* VPN client overriding DNS settings
+* Organizational DNS policy or Group Policy changes
+* Active Directory DNS health
+* Recent network configuration changes in change management logs
 
 ## Ticket Closure
 
