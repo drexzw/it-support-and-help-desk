@@ -1,153 +1,99 @@
 # DNS Troubleshooting Lab — Commands
 
-This document contains the PowerShell commands used during the DNS troubleshooting lab and explains what each command was used to determine.
+This document lists the PowerShell commands used during the DNS troubleshooting lab, what each one was used to determine, and whether it's backed by a screenshot in `screenshots/`.
 
-## 1. View IP Configuration
-
-```powershell
-ipconfig
-```
-
-### Purpose
-
-Displays the basic IPv4 configuration of the Windows machine.
-
-### Lab Configuration
-
-```text
-IPv4 Address:    172.31.33.17
-Subnet Mask:     255.255.240.0
-Default Gateway: 172.31.32.1
-```
-
----
-
-## 2. View Detailed Network Configuration
+## 1. View Detailed Network Configuration 📸
 
 ```powershell
 ipconfig /all
 ```
 
-### Purpose
+**Purpose:** Displays full network adapter info — IPv4 address, MAC address, DHCP status, default gateway, DNS servers.
 
-Displays detailed network adapter information, including:
+**Screenshot:** `04-working-dns-configuration.png`
 
-* IPv4 address
-* MAC address
-* DHCP status
-* Default gateway
-* DNS servers
-* Adapter information
-
-### Lab DNS Server
+**Lab result (working baseline):**
 
 ```text
-172.31.0.2
+IPv4 Address:    172.31.33.17
+Subnet Mask:     255.255.240.0
+Default Gateway: 172.31.32.1
+DNS Server:      172.31.0.2
 ```
 
 ---
 
-## 3. Test the Default Gateway
+## 2. Test the Default Gateway
 
 ```powershell
 ping 172.31.32.1
 ```
 
-### Purpose
+**Purpose:** Confirms the workstation can reach its default gateway before testing anything further out.
 
-Tests communication between the Windows workstation and its default gateway.
+**Screenshot:** none — performed during baseline setup, not individually captured.
 
-### Lab Result
-
-```text
-4 packets sent
-4 packets received
-0 packets lost
-```
+**Result:** 4 packets sent, 4 received, 0% loss.
 
 ---
 
-## 4. Test Internet Connectivity Without DNS
+## 3. Test Internet Connectivity Without DNS
 
 ```powershell
 ping 8.8.8.8
 ```
 
-### Purpose
+**Purpose:** Tests connectivity using a raw IP address, which doesn't depend on DNS. This is what separates "internet is down" from "DNS is down."
 
-Tests internet connectivity using an IP address rather than a hostname.
+**Screenshot:** none — performed during baseline setup, not individually captured.
 
-### Why It Matters
-
-This helps separate an internet connectivity problem from a DNS resolution problem.
-
-### Lab Result
-
-```text
-4 packets sent
-4 packets received
-0 packets lost
-```
+**Result:** 4 packets sent, 4 received, 0% loss.
 
 ---
 
-## 5. Query DNS
+## 4. Query DNS
 
 ```powershell
 nslookup google.com
 ```
 
-### Purpose
+**Purpose:** Tests whether the configured DNS server can resolve a hostname.
 
-Tests whether the configured DNS server can resolve a hostname.
+**Screenshots:**
+- Baseline success: not individually captured
+- Failure (after DNS was broken): `05-dns-resolution-failure.png`
+- Restored success: `06-dns-resolution-restored.png`
 
-### Working Result
-
-The initial query successfully returned Google's IP addresses.
-
-### Failure Result
-
-After the DNS configuration was intentionally changed, the DNS request timed out.
+**Failure result:** DNS request timed out against `192.0.2.1`.
 
 ---
 
-## 6. Test Hostname Connectivity
+## 5. Test Hostname Connectivity
 
 ```powershell
 ping google.com
 ```
 
-### Purpose
+**Purpose:** Tests hostname resolution and connectivity together — this is the command that reproduces the user's actual symptom.
 
-Tests hostname resolution and connectivity.
-
-### Working Result
-
-```text
-4 packets sent
-4 packets received
-0 packets lost
-```
-
-### Failure Result
-
-```text
-Ping request could not find host google.com.
-```
+**Screenshots:**
+- Baseline success: not individually captured
+- Failure: `05-dns-resolution-failure.png` → `Ping request could not find host google.com.`
+- Restored: `06-dns-resolution-restored.png` → 4 packets sent, 4 received, 0% loss
 
 ---
 
-## 7. Identify Network Adapters
+## 6. Identify Network Adapters
 
 ```powershell
 Get-NetAdapter
 ```
 
-### Purpose
+**Purpose:** Confirms the adapter name and Interface Index needed for the `Set-DnsClientServerAddress` commands below.
 
-Displays the network interfaces available on the Windows machine.
+**Screenshot:** none — the resulting Interface Index (`8`, `Ethernet 3`) is visible in the outputs of commands 1 and 7 instead.
 
-### Lab Adapter
+**Lab adapter:**
 
 ```text
 Name: Ethernet 3
@@ -156,68 +102,53 @@ Interface Index: 8
 Status: Up
 ```
 
-The interface index was required when changing the DNS configuration.
-
 ---
 
-## 8. Change the DNS Server
+## 7. Change the DNS Server (break it, intentionally)
 
 ```powershell
 Set-DnsClientServerAddress -InterfaceIndex 8 -ServerAddresses 192.0.2.1
 ```
 
-### Purpose
+**Purpose:** Intentionally points the adapter at an unreachable DNS server to reproduce a DNS failure on demand. `192.0.2.0/24` is a documentation/testing range (RFC 5737) — it will never respond, so the failure is reliable and repeatable.
 
-Changes the DNS server configured on interface index `8`.
-
-### Lab Use
-
-This intentionally changed the working DNS server to:
-
-```text
-192.0.2.1
-```
-
-The `192.0.2.0/24` network is reserved for documentation and testing purposes.
+**Screenshot:** none directly — but `05-dns-resolution-failure.png` confirms the change took effect, since `nslookup` shows the client querying `192.0.2.1`.
 
 ---
 
-## 9. Verify DNS Configuration
+## 8. Verify DNS Configuration
 
 ```powershell
 Get-DnsClientServerAddress -InterfaceIndex 8
 ```
 
-### Failure Configuration
+**Purpose:** Confirms which DNS server is actually configured on the interface — used both to confirm the break and to confirm the restore.
 
-```text
-192.0.2.1
-```
+**Screenshot:** `06-dns-resolution-restored.png` (restore verification)
 
-### Restored Configuration
-
-```text
-172.31.0.2
-```
+| State     | DNS Server   |
+| --------- | ------------ |
+| Broken    | `192.0.2.1`  |
+| Restored  | `172.31.0.2` |
 
 ---
 
-## 10. Restore the Working DNS Server
+## 9. Restore the Working DNS Server 📸
 
 ```powershell
 Set-DnsClientServerAddress -InterfaceIndex 8 -ServerAddresses 172.31.0.2
 ```
 
-### Purpose
+**Purpose:** Restores the original working DNS configuration.
 
-Restores the original working DNS configuration.
+**Screenshot:** `06-dns-resolution-restored.png`
 
 ---
 
 ## Troubleshooting Sequence
 
 ```text
-ipconfig
+ipconfig /all
     ↓
 ping 172.31.32.1
     ↓
@@ -229,41 +160,30 @@ ping google.com
     ↓
 Get-NetAdapter
     ↓
-Change DNS
+Break DNS (Set-DnsClientServerAddress → 192.0.2.1)
     ↓
-Verify DNS configuration
+Confirm failure (ping / nslookup)
     ↓
-Repeat connectivity tests
+Restore DNS (Set-DnsClientServerAddress → 172.31.0.2)
     ↓
-Restore DNS
+Verify configuration (Get-DnsClientServerAddress)
     ↓
-Verify configuration
-    ↓
-Test hostname again
+Confirm resolution restored (nslookup / ping)
 ```
 
 ## Command-to-Question Reference
 
-| Question                                  | Command                      |
-| ----------------------------------------- | ---------------------------- |
-| What is my IP configuration?              | `ipconfig`                   |
-| What DNS server am I using?               | `ipconfig /all`              |
-| Can I reach my gateway?                   | `ping 172.31.32.1`           |
-| Can I reach the internet without DNS?     | `ping 8.8.8.8`               |
-| Can DNS resolve a hostname?               | `nslookup google.com`        |
-| Can Windows resolve and reach a hostname? | `ping google.com`            |
-| What network adapters exist?              | `Get-NetAdapter`             |
-| What DNS server is configured?            | `Get-DnsClientServerAddress` |
-| How do I change the DNS server?           | `Set-DnsClientServerAddress` |
+| Question                                  | Command                        |
+| ------------------------------------------ | -------------------------------- |
+| What is my full network configuration?    | `ipconfig /all`                  |
+| Can I reach my gateway?                   | `ping 172.31.32.1`               |
+| Can I reach the internet without DNS?     | `ping 8.8.8.8`                   |
+| Can DNS resolve a hostname?               | `nslookup google.com`            |
+| Can Windows resolve and reach a hostname? | `ping google.com`                |
+| What network adapters exist?              | `Get-NetAdapter`                 |
+| What DNS server is configured?            | `Get-DnsClientServerAddress`     |
+| How do I change the DNS server?           | `Set-DnsClientServerAddress`     |
 
 ## Troubleshooting Principle
 
-Commands should answer questions.
-
-Instead of thinking:
-
-> "Which command should I run?"
-
-Think:
-
-> "What do I need to determine next?"
+Commands should answer questions. Instead of "which command should I run," the better question is "what do I need to determine next?" — the command follows from that.
