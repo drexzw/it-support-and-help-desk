@@ -4,19 +4,7 @@
 
 This lab simulates a Help Desk incident involving a Windows Server 2022 EC2 instance that is unable to access websites using domain names.
 
-The lab demonstrates how to troubleshoot a DNS-related connectivity issue by separating network connectivity into different layers and using evidence to identify the root cause.
-
-The troubleshooting process followed this sequence:
-
-1. Verify IP configuration
-2. Test default gateway connectivity
-3. Test internet connectivity using an IP address
-4. Test DNS resolution
-5. Test hostname connectivity
-6. Intentionally introduce a DNS failure
-7. Identify the failed layer
-8. Restore the correct DNS configuration
-9. Verify that connectivity has been restored
+The lab demonstrates how to isolate a DNS-related connectivity issue by testing network layers in order — from IP configuration up to hostname resolution — instead of guessing at a fix.
 
 ## Scenario
 
@@ -53,7 +41,7 @@ The objective was to determine whether the issue was caused by:
 * Instance type: `t3.micro`
 * Default VPC
 * Public IPv4 address enabled
-* Security Group configured for RDP
+* Security Group configured for RDP (restricted to my IP)
 * EBS-backed EC2 instance
 
 ### Windows
@@ -64,7 +52,23 @@ The objective was to determine whether the issue was caused by:
 * Network interface: `Ethernet 3`
 * Interface Index: `8`
 
+## Setup
+
+The instance was launched with a security group scoped to allow RDP (port 3389) only from my IP address.
+
+![EC2 security group configuration](screenshots/01-ec2-security-group-rdp.png)
+
+Connected to the instance using RDP with the auto-generated Administrator credentials.
+
+![RDP connection details](screenshots/02-rdp-client.png)
+
+![Windows Server 2022 desktop after connecting](screenshots/03-windows-ec2-desktop.png)
+
 ## Initial Network Configuration
+
+With the instance up and RDP connected, `ipconfig /all` was run to capture the working baseline before anything was changed.
+
+![ipconfig /all showing a working DNS configuration](screenshots/04-working-dns-configuration.png)
 
 | Configuration   | Value           |
 | --------------- | --------------- |
@@ -73,212 +77,83 @@ The objective was to determine whether the issue was caused by:
 | Default Gateway | `172.31.32.1`   |
 | DNS Server      | `172.31.0.2`    |
 
-## Troubleshooting Process
+At this point the instance had a valid IP configuration and a working DNS server, and hostname resolution worked normally (e.g. `nslookup google.com` and `ping google.com` both succeeded, prior to the failure simulation below).
 
-### 1. Verify IP Configuration
-
-```powershell
-ipconfig
-```
-
-The system had a valid IPv4 configuration, subnet mask, and default gateway.
-
-### 2. Test Default Gateway Connectivity
-
-```powershell
-ping 172.31.32.1
-```
-
-Result:
-
-* 4 packets sent
-* 4 packets received
-* 0% packet loss
-
-The workstation could communicate with its default gateway.
-
-### 3. Test Internet Connectivity Without DNS
-
-```powershell
-ping 8.8.8.8
-```
-
-Result:
-
-* 4 packets sent
-* 4 packets received
-* 0% packet loss
-
-This demonstrated that internet connectivity was working independently of DNS.
-
-### 4. Test DNS Resolution
-
-```powershell
-nslookup google.com
-```
-
-The query successfully returned Google's IP addresses.
-
-### 5. Test Hostname Connectivity
-
-```powershell
-ping google.com
-```
-
-Result:
-
-* 4 packets sent
-* 4 packets received
-* 0% packet loss
-
-At this point, the network was functioning normally.
+*Note: the baseline gateway ping (`ping 172.31.32.1`), the baseline `ping 8.8.8.8`, and the baseline successful `nslookup`/`ping google.com` were performed as part of establishing this working state but weren't individually captured as separate screenshots — only the final `ipconfig /all` snapshot above and the pass/fail table below are backed by images.*
 
 ## Simulating the DNS Failure
 
-The original DNS server was:
-
-```text
-172.31.0.2
-```
-
-The DNS server was intentionally changed to:
-
-```text
-192.0.2.1
-```
-
-using:
+The DNS server was intentionally pointed at an unreachable address to reproduce a DNS failure on purpose:
 
 ```powershell
 Set-DnsClientServerAddress -InterfaceIndex 8 -ServerAddresses 192.0.2.1
 ```
 
-The configuration was verified with:
+`192.0.2.0/24` is a documentation/testing-only range (RFC 5737), so it's guaranteed not to respond — useful for reliably reproducing a DNS timeout without depending on an external server actually being down.
 
-```powershell
-Get-DnsClientServerAddress -InterfaceIndex 8
-```
-
-The `192.0.2.0/24` network is reserved for documentation and testing purposes.
+*This command itself wasn't captured on screen — the screenshot below shows the resulting failure, where `nslookup` confirms the client is now querying `192.0.2.1`.*
 
 ## Failure Testing
 
-### Internet Connectivity by IP
-
-```powershell
-ping 8.8.8.8
-```
-
-Result:
-
-* 4 packets sent
-* 4 packets received
-* 0% packet loss
-
-Internet connectivity remained functional.
-
-### Hostname Connectivity
-
 ```powershell
 ping google.com
-```
-
-Result:
-
-```text
-Ping request could not find host google.com.
-```
-
-### DNS Query
-
-```powershell
 nslookup google.com
 ```
 
-The DNS request timed out.
+![ping and nslookup failing against the unreachable DNS server](screenshots/05-dns-resolution-failure.png)
+
+* `ping google.com` → `Ping request could not find host google.com.`
+* `nslookup google.com` → DNS request timed out against `192.0.2.1`
 
 ## Root Cause
 
-The Windows network adapter had been configured to use an invalid/unreachable DNS server:
+The Windows network adapter had been configured to use an invalid/unreachable DNS server (`192.0.2.1`). The underlying network connection was still operational — the failure was isolated to name resolution, not connectivity.
 
-```text
-192.0.2.1
-```
-
-The underlying network connection was still operational, but the workstation could no longer resolve domain names.
-
-| Test                        | Result |
-| --------------------------- | ------ |
-| IP configuration            | PASS   |
-| Gateway connectivity        | PASS   |
-| Internet connectivity by IP | PASS   |
-| DNS resolution              | FAIL   |
-| Hostname connectivity       | FAIL   |
-
-This isolated the problem to DNS rather than general network connectivity.
+| Test                        | Result   | Evidence                |
+| ---------------------------- | -------- | ------------------------ |
+| IP configuration              | PASS     | Screenshot 04            |
+| Gateway connectivity          | Not pictured | Performed, not captured |
+| Internet connectivity by IP   | Not pictured | Performed, not captured |
+| DNS resolution                | FAIL     | Screenshot 05            |
+| Hostname connectivity         | FAIL     | Screenshot 05            |
 
 ## Resolution
 
-The original DNS server was restored:
+The original DNS server was restored and verified, then DNS resolution and hostname connectivity were re-tested:
 
 ```powershell
 Set-DnsClientServerAddress -InterfaceIndex 8 -ServerAddresses 172.31.0.2
-```
-
-The configuration was verified:
-
-```powershell
 Get-DnsClientServerAddress -InterfaceIndex 8
-```
-
-DNS resolution was tested again:
-
-```powershell
 nslookup google.com
-```
-
-Finally:
-
-```powershell
 ping google.com
 ```
 
-Result:
+![DNS restored, verified, and resolution working again](screenshots/06-dns-resolution-restored.png)
 
-* 4 packets sent
-* 4 packets received
-* 0% packet loss
-
-DNS resolution and hostname connectivity were successfully restored.
+* `Get-DnsClientServerAddress` confirms `172.31.0.2` is back on interface 8
+* `nslookup google.com` resolves successfully
+* `ping google.com` succeeds — 4 packets sent, 4 received, 0% loss
 
 ## Troubleshooting Methodology
 
-The most important lesson from this lab was not memorizing commands.
+The point of this lab wasn't memorizing commands — it was building a repeatable way to answer: *what question am I trying to answer, and which tool gives me the evidence?*
 
-The goal was to understand:
-
-> What question am I trying to answer, and which tool can provide the evidence?
-
-| Question                                     | Tool                         |
-| -------------------------------------------- | ---------------------------- |
-| What is the machine's network configuration? | `ipconfig`                   |
-| Can the machine reach its gateway?           | `ping <gateway>`             |
-| Can the machine reach the internet by IP?    | `ping 8.8.8.8`               |
-| Can DNS resolve a hostname?                  | `nslookup <hostname>`        |
-| Can Windows communicate using a hostname?    | `ping <hostname>`            |
-| Which network adapters exist?                | `Get-NetAdapter`             |
-| Which DNS server is configured?              | `Get-DnsClientServerAddress` |
-| How can the DNS configuration be changed?    | `Set-DnsClientServerAddress` |
+| Question                                     | Tool                          |
+| --------------------------------------------- | ------------------------------ |
+| What is the machine's network configuration?  | `ipconfig` / `ipconfig /all`   |
+| Can the machine reach its gateway?            | `ping <gateway>`               |
+| Can the machine reach the internet by IP?     | `ping 8.8.8.8`                 |
+| Can DNS resolve a hostname?                   | `nslookup <hostname>`          |
+| Can Windows communicate using a hostname?     | `ping <hostname>`              |
+| Which network adapters exist?                 | `Get-NetAdapter`               |
+| Which DNS server is configured?               | `Get-DnsClientServerAddress`   |
+| How can the DNS configuration be changed?     | `Set-DnsClientServerAddress`   |
 
 ## Real-World Help Desk Application
 
-A user may report:
+A user may report: *"The internet isn't working."*
 
-> "The internet isn't working."
-
-A Help Desk technician should not immediately assume that the entire network connection is down.
-
-Instead, the technician should determine what is actually failing.
+A Help Desk technician shouldn't immediately assume the whole network connection is down. Instead, work down the chain:
 
 ```text
 Can the computer reach the gateway?
@@ -290,13 +165,11 @@ Can DNS resolve a hostname?
 Can the computer connect using that hostname?
 ```
 
-This approach helps isolate problems and prevents unnecessary configuration changes.
+This isolates the actual failing layer and prevents unnecessary configuration changes.
 
 ## Important DNS Consideration
 
-DNS can be working correctly while a specific internal hostname is not.
-
-For example:
+DNS can be working correctly overall while one specific hostname still fails:
 
 ```text
 google.com                  → works
@@ -304,29 +177,7 @@ youtube.com                 → works
 fileserver.company.local    → fails
 ```
 
-Possible causes include:
-
-* Missing DNS record
-* Incorrect DNS record
-* Internal DNS zone problem
-* Active Directory DNS
-* Split-DNS configuration
-* VPN configuration
-* DNS cache
-* Internal server availability
-
-In a corporate environment, replacing an organization's DNS server with a public DNS server may restore public internet access while breaking internal resources.
-
-## Screenshots
-
-```text
-01-ec2-security-group-rdp.png
-02-rdp-client.png
-03-windows-ec2-desktop.png
-04-working-dns-configuration.png
-05-dns-resolution-failure.png
-06-dns-resolution-restored.png
-```
+Possible causes include a missing or incorrect DNS record, an internal DNS zone problem, Active Directory DNS, split-DNS configuration, VPN routing, a stale cache, or the internal server itself being down. In a corporate environment, swapping an org's internal DNS server for a public one may restore public internet access while breaking internal resources — so the fix has to match the actual failing layer.
 
 ## Skills Demonstrated
 
@@ -337,22 +188,14 @@ In a corporate environment, replacing an organization's DNS server with a public
 * IPv4 networking
 * DNS troubleshooting
 * PowerShell
-* `ipconfig`
-* `ping`
-* `nslookup`
-* `Get-NetAdapter`
-* `Get-DnsClientServerAddress`
-* `Set-DnsClientServerAddress`
-* Layered troubleshooting
-* Root cause identification
+* `ipconfig`, `ping`, `nslookup`
+* `Get-NetAdapter`, `Get-DnsClientServerAddress`, `Set-DnsClientServerAddress`
+* Layered troubleshooting and root cause isolation
 * Incident documentation
-* Verification and remediation
 
 ## Final Outcome
 
-The simulated DNS incident was successfully diagnosed and resolved.
-
-The final troubleshooting model was:
+The simulated DNS incident was diagnosed and resolved by isolating the failure to the DNS layer rather than assuming a general connectivity problem:
 
 ```text
 Identify the symptom
