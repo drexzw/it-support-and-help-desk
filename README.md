@@ -110,7 +110,7 @@ A new employee needs access to department resources while unauthorized users mus
 * Least-privilege principles
 * Access verification
 
-[View Lab →](./linux-user-management-and-file-permissions/)
+[View Lab →](https://github.com/drexzw/it-support-and-help-desk/tree/main/linux%20user%20management%20and%20file%20permissions)
 
 ---
 
@@ -136,7 +136,7 @@ Prepare a Linux endpoint for a new employee while applying baseline security con
 
 This lab includes real troubleshooting scenarios encountered during implementation, including SSH socket configuration and Fail2ban configuration issues.
 
-[View Lab →](./onboarding-endpoint-security-hardening/)
+[View Lab →](https://github.com/drexzw/it-support-and-help-desk/tree/main/onboarding-endpoint-security-hardening)
 
 ---
 
@@ -169,7 +169,7 @@ The investigation follows a structured approach:
 7. Verify restored configuration
 8. Perform final connectivity testing
 
-[View Lab →](./dhcp-ip-configuration-and-troubleshooting-lab/)
+[View Lab →](https://github.com/drexzw/it-support-and-help-desk/tree/main/dhcp-ip-configuration-and-troubleshooting-lab)
 
 ---
 
@@ -196,7 +196,7 @@ The lab demonstrates how to distinguish between:
 
 The environment intentionally introduces an incorrect DNS configuration and then uses testing to identify and resolve the failure.
 
-[View Lab →](./dns-troubleshooting-lab/)
+[View Lab →](https://github.com/drexzw/it-support-and-help-desk/tree/main/dns-troubleshooting-lab)
 
 ---
 
@@ -216,7 +216,7 @@ Users require different levels of access to files and folders based on their res
 * Remote Desktop
 * Cloud-hosted Windows environments
 
-[View Lab →](./nfts-permissions-lab/)
+[View Lab →](https://github.com/drexzw/it-support-and-help-desk/tree/main/nfts-permissions-lab)
 
 ---
 
@@ -234,7 +234,7 @@ A user reports that they cannot access a shared business resource that they are 
 * Access verification
 * Help Desk ticket resolution
 
-[View Lab →](./shared-folder-access-denied/)
+[View Lab →](https://github.com/drexzw/it-support-and-help-desk/tree/main/shared-folder-access-denied)
 
 ---
 
@@ -253,7 +253,7 @@ A user is unable to sign in and requires assistance with their account.
 * Ticket documentation
 * Resolution verification
 
-[View Lab →](./windows-password-reset-and-account-unlock/)
+[View Lab →](https://github.com/drexzw/it-support-and-help-desk/tree/main/windows-password-reset-and-account-unlock)
 
 > **Future expansion:** Active Directory-based password reset and account lockout troubleshooting will be incorporated into the Active Directory lab.
 
@@ -274,7 +274,7 @@ A Windows workstation is unable to successfully install an update.
 * Root-cause troubleshooting
 * Help Desk ticket documentation
 
-[View Lab →](./windows-update-failure/)
+[View Lab →](https://github.com/drexzw/it-support-and-help-desk/tree/main/windows-password-reset-and-account-unlock)
 
 ---
 
