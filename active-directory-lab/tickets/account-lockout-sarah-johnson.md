@@ -5,9 +5,9 @@
 **Priority:** Medium
 **Category:** Account / Authentication
 **Environment:** Active Directory Lab
-**Domain:** `corp.drexzw.local`
+**Domain:** `corp.drexzw.local` (NetBIOS: `DREXZW`)
 **Affected User:** Sarah Johnson
-**Affected Account:** `sarah`
+**Affected Account:** `sjohnson`
 **Technician:** IT Support Lab
 **Date:** September 2026
 
@@ -31,75 +31,57 @@ Sarah reported that she was unable to sign in to her Windows workstation because
 
 The issue appeared to be an Active Directory account lockout.
 
-Before making changes, the account lockout policy was reviewed to determine the conditions under which an account becomes locked.
+Before making changes, the domain's Account Lockout Policy was reviewed in Group Policy Management to determine the conditions under which an account becomes locked.
 
-The Domain Controller was checked to verify the configured account lockout settings.
+Reviewed in the Group Policy Management Editor (Default Domain Policy → Computer Configuration → Windows Settings → Security Settings → Account Policies → Account Lockout Policy):
 
-Command used:
+| Setting | Value |
+|---|---|
+| Account lockout threshold | 5 invalid logon attempts |
+| Account lockout duration | 5 minutes |
+| Reset account lockout counter after | 1 minute |
 
-```powershell
-Get-ADDefaultDomainPasswordPolicy
-```
-
-Relevant settings included:
-
-* Lockout threshold
-* Lockout duration
-* Lockout observation window
+Screenshot: `../screenshots/06-account-lockout-policy/02-account-lockout-policy-settings.png`
 
 ---
 
 ## 3. Troubleshooting
 
-### Step 1 — Verify the User Account
+### Step 1 — Verify the User Account (Baseline)
 
-The user's Active Directory account was checked to confirm that the account existed.
+Sarah Johnson's account was opened in Active Directory Users and Computers (Properties → Account tab) to confirm the account existed and to capture its state before reproducing the issue.
 
-```powershell
-Get-ADUser sarah
-```
-
-The account was present in Active Directory.
+Screenshot: `../screenshots/06-account-lockout-policy/01-sjohnson-account-before-lockout.png`
 
 ---
 
-### Step 2 — Check Account Lockout Status
+### Step 2 — Reproduce the Lockout
 
-The `LockedOut` property was checked:
+Rather than waiting for a real failed-login event, the lockout was intentionally reproduced from a client machine using `runas` with an incorrect password, repeated past the configured threshold:
 
 ```powershell
-Get-ADUser sarah -Properties LockedOut
+runas /user:DREXZW\sjohnson powershell.exe
 ```
 
-The account was confirmed to be locked.
-
-Example result:
+After 5 failed attempts, the account locked, and Windows returned:
 
 ```text
-LockedOut : True
+1909: The referenced account is currently locked out and may not be logged on to.
 ```
+
+Screenshot: `../screenshots/06-account-lockout-policy/03-account-lockout-trigger-test.png`
 
 ---
 
-### Step 3 — Review Lockout Policy
+### Step 3 — Confirm the Lockout in Active Directory
 
-The domain's account lockout configuration was reviewed:
+Sarah Johnson's account was reopened in Active Directory Users and Computers. The Account tab displayed:
 
-```powershell
-Get-ADDefaultDomainPasswordPolicy
-```
+> "This account is currently locked out on this Active Directory Domain Controller."
 
-The configured lockout threshold explained why repeated unsuccessful authentication attempts could result in the account becoming locked.
+with the **Unlock account** checkbox now available.
 
----
-
-### Step 4 — Reproduce the Issue
-
-The account-lockout behavior was intentionally reproduced in the lab by generating unsuccessful authentication attempts.
-
-This confirmed that the configured Active Directory policy was functioning as expected.
-
-The test demonstrated that repeated failed authentication attempts could transition the account into a locked state.
+Screenshot: `../screenshots/06-account-lockout-policy/04-account-lockout-confirmation-aduc.png`
 
 ---
 
@@ -107,9 +89,9 @@ The test demonstrated that repeated failed authentication attempts could transit
 
 **Root Cause:**
 
-The Active Directory user account was locked after repeated unsuccessful authentication attempts exceeded the configured account lockout threshold.
+The Active Directory user account `sjohnson` was locked after repeated unsuccessful authentication attempts exceeded the configured account lockout threshold (5 invalid attempts).
 
-The lockout was reproduced intentionally as part of the lab exercise.
+The lockout was reproduced intentionally as part of the lab exercise, using repeated `runas` attempts with a deliberately incorrect password.
 
 > **Lab note:** In a real production incident, the technician would also investigate the source of the failed authentication attempts before simply unlocking the account.
 
@@ -117,72 +99,67 @@ Potential causes in a production environment could include:
 
 * User entering an incorrect password
 * Saved credentials containing an old password
-* A mapped network drive
+* A mapped network drive using stale credentials
 * An application repeatedly attempting authentication
 * A Windows service using outdated credentials
-* Another device repeatedly attempting to authenticate
+* Another device repeatedly attempting to authenticate as the user
 
 ---
 
 ## 5. Resolution
 
-The locked account was unlocked from the Domain Controller using:
+The account was unlocked directly from Active Directory Users and Computers by checking the **Unlock account** checkbox on the Account tab and applying the change.
 
-```powershell
-Unlock-ADAccount -Identity sarah
-```
-
-The account status was then checked again:
-
-```powershell
-Get-ADUser sarah -Properties LockedOut
-```
-
-Expected result:
-
-```text
-LockedOut : False
-```
+Screenshot: `../screenshots/06-account-lockout-policy/04-account-lockout-confirmation-aduc.png`
 
 ---
 
 ## 6. Validation
 
-After unlocking the account, authentication was tested again.
+After unlocking the account, authentication was tested again using the same `runas` approach:
 
-The account was no longer locked and the user was able to authenticate successfully.
+```powershell
+runas /user:DREXZW\sjohnson powershell.exe
+whoami
+```
+
+The result confirmed successful domain authentication as the affected user:
+
+```text
+drexzw\sjohnson
+```
+
+Screenshot: `../screenshots/06-account-lockout-policy/05-account-unlock-success-test.png`
 
 The troubleshooting process therefore confirmed:
 
 ```text
-Account locked
+Account locked (via repeated runas attempts)
       ↓
-Verified account exists
+Verified baseline account state in ADUC
       ↓
-Confirmed LockedOut = True
+Reviewed configured lockout policy (GPMC)
       ↓
-Reviewed lockout policy
+Confirmed lockout in ADUC ("currently locked out" message)
       ↓
-Unlocked account
+Unlocked account via ADUC checkbox
       ↓
-Verified LockedOut = False
+Re-tested authentication via runas + whoami
       ↓
-Tested authentication
-      ↓
-Access restored
+Access restored — confirmed as drexzw\sjohnson
 ```
 
 ---
 
 ## 7. Resolution Notes
 
-**Resolution:** User account unlocked successfully.
+**Resolution:** User account unlocked successfully via Active Directory Users and Computers.
 
 **User impact:** User was temporarily unable to authenticate to the domain.
 
 **Final account state:** Unlocked.
 
-**Validation:** Successful authentication confirmed after remediation.
+**Validation:** Successful `runas` authentication as `DREXZW\sjohnson`, confirmed via `whoami`.
 
 **Follow-up:** If this occurred in production, investigate the source of the failed authentication attempts to prevent the account from becoming locked again.
 
@@ -195,24 +172,52 @@ This incident was completed as a simulated Help Desk scenario within a personal 
 The purpose of the ticket was to practice a realistic troubleshooting workflow:
 
 1. Identify the user's reported symptom
-2. Verify the account
-3. Check the account state
-4. Review the applicable domain policy
-5. Reproduce the behavior when appropriate
+2. Capture the account's baseline state
+3. Review the applicable domain policy
+4. Reproduce the behavior intentionally
+5. Confirm the resulting account state
 6. Apply the appropriate remediation
 7. Validate the result
 8. Document the resolution
 
-The exercise demonstrates how a Help Desk technician can use both the Active Directory GUI and PowerShell to investigate and resolve a common Windows authentication issue.
+This run of the exercise was performed entirely through the Active Directory GUI (Group Policy Management and Active Directory Users and Computers) plus `runas`/`whoami` on the client for testing. No PowerShell AD cmdlets (`Get-ADUser`, `Unlock-ADAccount`, etc.) were used in this specific run — see the note below for the PowerShell equivalent.
 
 ---
 
-## 9. Evidence
+## 9. Alternative / Production Approach (Not Pictured in This Run)
+
+In a real environment, or a future run of this lab, the same investigation and remediation could be performed with the Active Directory PowerShell module instead of the GUI:
+
+```powershell
+# Check lockout status
+Get-ADUser sjohnson -Properties LockedOut
+
+# Review domain lockout policy
+Get-ADDefaultDomainPasswordPolicy
+
+# Unlock the account
+Unlock-ADAccount -Identity sjohnson
+
+# Confirm it unlocked
+Get-ADUser sjohnson -Properties LockedOut
+```
+
+These commands are included for reference only — they were not run as part of this ticket and are not shown in any screenshot for this scenario.
+
+---
+
+## 10. Evidence
 
 Supporting screenshots are stored in:
 
 ```text
-../screenshots/06-account-lockout/
+../screenshots/06-account-lockout-policy/
 ```
 
-Evidence includes the account lockout configuration, testing, account state verification, remediation, and successful validation.
+| Step | Screenshot |
+|---|---|
+| Account state before lockout | `01-sjohnson-account-before-lockout.png` |
+| Account lockout policy configuration | `02-account-lockout-policy-settings.png` |
+| Lockout triggered via repeated `runas` attempts | `03-account-lockout-trigger-test.png` |
+| Lockout confirmed in ADUC | `04-account-lockout-confirmation-aduc.png` |
+| Successful authentication after unlock | `05-account-unlock-success-test.png` |
