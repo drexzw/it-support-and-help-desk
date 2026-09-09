@@ -55,7 +55,7 @@ The client needed to be verified as a member of the Active Directory domain rath
 The client's domain information was checked using:
 
 ```powershell
-(Get-CimInstance Win32_ComputerSystem).Domain
+systeminfo | findstr /B /C:"Domain"
 ```
 
 The system information was also reviewed.
@@ -82,20 +82,19 @@ Verify the final state from the client.
 
 ## Symptoms
 
-During the lab, the workstation's computer object was not immediately visible in the expected Active Directory Users and Computers location.
-
-This created a useful troubleshooting scenario because the client could not simply be assumed to be missing from Active Directory.
+During the lab, the workstation's computer object needed to be confirmed in the expected Active Directory Users and Computers location (the Workstations OU) rather than simply assumed.
 
 ## Investigation
 
 The client-side domain membership was checked first.
 
-The Active Directory Users and Computers console was then reviewed for the computer object.
+The Active Directory Users and Computers console was then reviewed for the computer object, first with the object filter limited to Groups only (showing no computer), then again with Computers included in the filter (showing `AD-CLIENT` present in the Workstations OU).
 
-PowerShell could also be used to search computer accounts:
+This was cross-checked from the Domain Controller using PowerShell:
 
 ```powershell
-Get-ADComputer -Filter *
+Get-ADComputer -Filter 'Name -eq "AD-CLIENT"' -Properties DistinguishedName | Select-Object Name, DistinguishedName
+Get-ADComputer -SearchBase "OU=Workstations,DC=corp,DC=drexzw,DC=local" -Filter * | Select-Object Name, DistinguishedName
 ```
 
 ## Resolution
@@ -112,15 +111,15 @@ Client
   v
 Domain Controller
   |
-  +-- Active Directory Users and Computers
-  +-- Computer object
+  +-- Active Directory Users and Computers (GUI filter)
+  +-- Get-ADComputer (PowerShell)
 ```
 
 This prevented the troubleshooting process from focusing on only one system.
 
 ## Lesson
 
-When an AD object appears to be missing, verify the client state before making additional changes to Active Directory.
+When confirming an AD object's location, verify the client state and cross-check with more than one tool (GUI filter and PowerShell) before assuming an object is missing or misplaced.
 
 ---
 
@@ -168,24 +167,12 @@ A Group Policy configuration was created and linked to the workstation organizat
 
 ## Investigation
 
-First, the policy configuration and OU linkage were checked in Group Policy Management.
+First, the policy configuration and OU linkage were checked in Group Policy Management, and cross-checked from PowerShell with `Get-ADOrganizationalUnit` (confirming the `LinkedGroupPolicyObjects` attribute on the Workstations OU).
 
 The client was then forced to refresh Group Policy:
 
 ```powershell
 gpupdate /force
-```
-
-The resulting policies were checked with:
-
-```powershell
-gpresult /r
-```
-
-A detailed report can also be generated with:
-
-```powershell
-gpresult /h gpresult.html
 ```
 
 ## Resolution
@@ -201,7 +188,7 @@ A better troubleshooting approach is:
 ```text
 GPO exists
    ↓
-GPO linked correctly
+GPO linked correctly (verified via GUI and Get-ADOrganizationalUnit)
    ↓
 Client belongs to correct OU
    ↓
@@ -218,57 +205,56 @@ Expected behavior tested
 
 ## Scenario
 
-A simulated Help Desk ticket was created for a user whose Active Directory account had become locked after repeated unsuccessful authentication attempts.
+A simulated Help Desk ticket was created for the user Sarah Johnson (`sjohnson`), whose Active Directory account became locked after repeated unsuccessful authentication attempts.
 
 The scenario was based on a common Windows support problem.
 
 ## Investigation
 
-The configured account lockout policy was checked using:
+The configured account lockout policy was checked in the Group Policy Management Editor (Default Domain Policy → Account Lockout Policy):
 
-```powershell
-Get-ADDefaultDomainPasswordPolicy
-```
+* Lockout threshold: 5 invalid logon attempts
+* Lockout duration: 5 minutes
+* Reset lockout counter after: 1 minute
 
-The relevant lockout settings included:
-
-* Lockout threshold
-* Lockout duration
-* Lockout observation window
-
-The user's account state could then be checked with:
-
-```powershell
-Get-ADUser <username> -Properties LockedOut
-```
+The user's baseline account state was reviewed in Active Directory Users and Computers (Properties → Account tab) before reproducing the issue.
 
 ## Testing
 
-The lockout behavior was reproduced in the lab by generating unsuccessful authentication attempts.
+The lockout was reproduced by repeatedly running the following from the client with an intentionally incorrect password:
 
-This demonstrated that the configured policy could cause an account to become locked after the required number of failed attempts.
+```powershell
+runas /user:DREXZW\sjohnson powershell.exe
+```
+
+After the configured threshold was exceeded, Windows returned:
+
+```text
+1909: The referenced account is currently locked out and may not be logged on to.
+```
+
+Reopening the account in Active Directory Users and Computers confirmed the lockout, showing:
+
+> "This account is currently locked out on this Active Directory Domain Controller."
 
 ## Resolution
 
-After confirming that the account was locked, the account could be unlocked by an administrator using:
+The account was unlocked by checking the **Unlock account** checkbox on the Account tab in Active Directory Users and Computers.
+
+Authentication was then re-tested:
 
 ```powershell
-Unlock-ADAccount -Identity <username>
+runas /user:DREXZW\sjohnson powershell.exe
+whoami
 ```
 
-The account state was then verified again:
-
-```powershell
-Get-ADUser <username> -Properties LockedOut
-```
-
-The expected state after remediation was:
+which returned:
 
 ```text
-LockedOut : False
+drexzw\sjohnson
 ```
 
-The user was then able to authenticate successfully again.
+confirming the account was unlocked and functional.
 
 ## Lesson
 
@@ -285,7 +271,9 @@ Possible causes include:
 * Mapped drives
 * Repeated authentication attempts from another device
 
-In this lab, the lockout was intentionally reproduced to understand and verify the configured policy.
+In this lab, the lockout was intentionally reproduced using repeated `runas` attempts to understand and verify the configured policy.
+
+> **Note:** This run of the scenario was performed entirely through the GUI (Group Policy Management and Active Directory Users and Computers) plus `runas`/`whoami` for testing. The equivalent PowerShell cmdlets (`Get-ADUser -Properties LockedOut`, `Unlock-ADAccount`) are valid alternatives and are documented in `commands.md` for reference, but were not used in this specific run.
 
 ---
 
@@ -319,7 +307,7 @@ Useful commands:
 ipconfig /all
 nslookup corp.drexzw.local
 whoami
-gpresult /r
+systeminfo | findstr /B /C:"Domain"
 ```
 
 ## Layer 3 — Active Directory
@@ -333,12 +321,12 @@ Check:
 * Computer object
 * Domain policy
 
-Useful commands:
+This can be checked via the GUI (Active Directory Users and Computers, Group Policy Management) or PowerShell:
 
 ```powershell
-Get-ADUser <username> -Properties LockedOut
-Get-ADGroupMember "GG-IT-Users"
 Get-ADComputer -Filter *
+Get-ADOrganizationalUnit -Identity "OU=Workstations,DC=corp,DC=drexzw,DC=local"
+Get-ADUser <username> -Properties LockedOut
 Get-ADDefaultDomainPasswordPolicy
 ```
 
@@ -348,15 +336,8 @@ Make the smallest appropriate change.
 
 Examples:
 
-```powershell
-Unlock-ADAccount -Identity <username>
-```
-
-or refresh policy:
-
-```powershell
-gpupdate /force
-```
+* Check the **Unlock account** box in Active Directory Users and Computers, or run `Unlock-ADAccount -Identity <username>`
+* Refresh policy with `gpupdate /force`
 
 ## Layer 5 — Validation
 
@@ -409,7 +390,7 @@ The final step should always be to reproduce the original failure condition and 
 Account-lockout incident:
 
 ```text
-tickets/account-lockout-sarah-johnson.md
+tickets/account-lockout-sjohnson.md
 ```
 
 Command reference:
