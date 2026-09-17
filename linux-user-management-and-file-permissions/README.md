@@ -48,7 +48,7 @@ The goal is to ensure employees have the access required to perform their jobs w
 The lab environment contains the following employees and department groups:
 
 | User            | Department Group |
-| --------------- | ---------------- |
+| --------------- | ----------------- |
 | `john.smith`    | `developers`     |
 | `sarah.johnson` | `developers`     |
 | `michael.brown` | `finance`        |
@@ -141,7 +141,7 @@ The following permission types were used:
 * `w` — Write
 * `x` — Execute
 
-Numeric permissions such as `755`, `770`, and `660` were also used where appropriate.
+Numeric permissions `770` and `755` were used for the department directories, with `770` initially over-permissioned as `777` on the public folder before being corrected — see `screenshots/04-permissions/`.
 
 ---
 
@@ -154,11 +154,10 @@ Testing included:
 * Authorized access
 * Unauthorized access
 * Reading files
-* Modifying files
 * Directory access
 * Permission verification
 
-The results were compared against the intended access requirements.
+The results were compared against the intended access requirements. See `screenshots/05-access-testing/`.
 
 ---
 
@@ -211,12 +210,28 @@ Where:
 
 ---
 
+## Evidence Trail
+
+Screenshots are organized to follow the order of the work performed:
+
+```text
+screenshots/
+├── 01-user-management/
+├── 02-directory-structure/
+├── 03-ownership/
+├── 04-permissions/
+├── 05-access-testing/
+└── 06-troubleshooting/
+```
+
+---
+
 ## Documentation
 
 Additional documentation for this lab is available below:
 
 * [Commands](./commands.md)
-* [Troubleshooting](./troubleshooting.md)
+* [Support Ticket](./ticket.md)
 * [Screenshots](./screenshots/)
 
 ---
@@ -228,4 +243,3 @@ The lab successfully demonstrated how Linux user accounts, groups, ownership, an
 The exercise also provided practical troubleshooting experience by requiring access permissions to be verified and corrected when users did not have the expected level of access.
 
 This represents a foundational Linux administration skill set applicable to IT support, system administration, and future cloud/DevOps environments.
-
