@@ -1,103 +1,231 @@
-# Linux User Management & File Permissions Lab
+# Linux User Management & File Permissions
 
 ## Overview
 
-This lab simulates a common IT Support and Linux system administration task: onboarding a new employee, managing user accounts, assigning group memberships, and configuring secure file permissions. The objective is to demonstrate fundamental Linux administration skills used in enterprise environments to manage user access and protect shared resources.
+This lab simulates a user and file-permission management task performed by the IT team at **Ubuntu Tech Cloud Solutions**.
+
+The objective was to configure Linux users and groups, establish appropriate file and directory ownership, apply permissions based on job responsibilities, and verify that users could access only the resources they were authorized to use.
+
+The lab demonstrates fundamental Linux administration and access-control practices commonly used in IT support, system administration, and cloud environments.
 
 ---
 
-## Objectives
+## Business Scenario
 
-* Create and manage Linux user accounts
-* Create and manage user groups
-* Assign users to department groups
-* Configure user passwords
-* Create shared departmental directories
-* Manage file and directory ownership
-* Configure Linux file permissions using the principle of least privilege
-* Verify user access through permission testing
-* Remove temporary user accounts
+Ubuntu Tech Cloud Solutions is onboarding employees who require access to company resources based on their departments.
+
+The IT team is responsible for:
+
+* Creating and managing employee accounts
+* Assigning users to appropriate security groups
+* Creating department-specific resources
+* Configuring ownership and permissions
+* Testing authorized and unauthorized access
+* Troubleshooting permission-related issues
+* Applying the principle of least privilege
+
+The goal is to ensure employees have the access required to perform their jobs without unnecessarily exposing company resources.
 
 ---
 
 ## Environment
 
-* **Operating System:** Ubuntu Linux
-* **Shell:** Bash
-* **Tools Used:**
-
-  * `useradd`
-  * `userdel`
-  * `groupadd`
-  * `usermod`
-  * `passwd`
-  * `mkdir`
-  * `chmod`
-  * `chgrp`
-  * `ls`
-  * `id`
-  * `groups`
-  * `su`
+| Component        | Details                          |
+| ---------------- | -------------------------------- |
+| Operating System | Ubuntu Linux                     |
+| Environment      | Linux virtual/lab environment    |
+| Shell            | Bash                             |
+| User Management  | `useradd` / `usermod` / `passwd` |
+| Group Management | Linux groups                     |
+| Permissions      | `chmod`                          |
+| Ownership        | `chown`                          |
+| Verification     | `id`, `groups`, `ls -l`          |
 
 ---
 
-## Scenario
+## Users and Groups
 
-A new employee named **Sarah** joins the Marketing department. As the IT Support technician, the task is to create her account, assign her to the appropriate department group, configure secure access to a shared marketing directory, and verify that permissions allow only authorized users to access departmental resources.
+The lab environment contains the following employees and department groups:
 
-To validate the configuration, a temporary contractor account is created to confirm that unauthorized users are denied access before being removed from the system.
+| User            | Department Group |
+| --------------- | ---------------- |
+| `john.smith`    | `developers`     |
+| `sarah.johnson` | `developers`     |
+| `michael.brown` | `finance`        |
+
+These group memberships are used to control access to department-specific resources.
+
+---
+
+## Objectives
+
+The following objectives were completed as part of the lab:
+
+1. Create and manage Linux user accounts.
+2. Create department-based Linux groups.
+3. Assign users to the appropriate groups.
+4. Verify user and group membership.
+5. Create directories and files for company resources.
+6. Configure file and directory ownership.
+7. Apply Linux read, write, and execute permissions.
+8. Test access using different users.
+9. Identify and troubleshoot permission-related issues.
+10. Apply the principle of least privilege.
 
 ---
 
 ## Tasks Completed
 
-* Created a new Linux group for the Marketing department
-* Created a new user account with a home directory and Bash shell
-* Assigned the user to the Marketing group
-* Configured a secure password for the new account
-* Created a shared Marketing directory
-* Assigned group ownership to the Marketing group
-* Configured directory permissions using `chmod`
-* Created a shared file for departmental collaboration
-* Configured file permissions for group access
-* Verified authorized user access by logging in as the new employee
-* Verified unauthorized access restrictions using a contractor account
-* Removed the temporary contractor account after testing
+### 1. User Management
+
+Linux user accounts were created for employees at Ubuntu Tech Cloud Solutions.
+
+User accounts were verified using commands such as:
+
+```bash
+id username
+```
+
+and:
+
+```bash
+groups username
+```
+
+---
+
+### 2. Group Management
+
+Department-based groups were created to simplify access management.
+
+The following groups were configured:
+
+* `developers`
+* `finance`
+
+Users were then assigned to their respective department groups.
+
+---
+
+### 3. File and Directory Management
+
+Company resources were organized into directories and files that could be assigned to specific departments.
+
+Ownership was configured using:
+
+```bash
+chown
+```
+
+This allowed resources to be associated with the appropriate users and groups.
+
+---
+
+### 4. Linux Permissions
+
+Linux file permissions were configured using:
+
+```bash
+chmod
+```
+
+Permissions were applied using the standard Linux permission categories:
+
+* **User/Owner**
+* **Group**
+* **Others**
+
+The following permission types were used:
+
+* `r` — Read
+* `w` — Write
+* `x` — Execute
+
+Numeric permissions such as `755`, `770`, and `660` were also used where appropriate.
+
+---
+
+### 5. Access Testing
+
+Access was tested using different employee accounts to verify that permissions were working as intended.
+
+Testing included:
+
+* Authorized access
+* Unauthorized access
+* Reading files
+* Modifying files
+* Directory access
+* Permission verification
+
+The results were compared against the intended access requirements.
 
 ---
 
 ## Skills Demonstrated
 
-* Linux User Administration
-* Group Management
-* File and Directory Permissions
-* Access Control
-* Linux Command Line
-* Identity and Access Management (IAM) Concepts
-* Principle of Least Privilege
-* System Administration Fundamentals
+This lab demonstrates practical experience with:
+
+* Linux user administration
+* Linux group administration
+* File and directory management
+* File ownership
+* Linux permissions
+* `chmod`
+* `chown`
+* User/group verification
+* Access-control troubleshooting
+* Least-privilege access
+* Bash command-line administration
+* Basic IT support troubleshooting
 
 ---
 
-## Key Linux Commands
+## Key Linux Concepts
 
-```bash
-useradd
-userdel
-groupadd
-usermod
-passwd
-chmod
-chgrp
-mkdir
-ls
-id
-groups
-su
+### Permission Structure
+
+Linux permissions are represented in three categories:
+
+```text
+Owner | Group | Others
 ```
+
+For example:
+
+```text
+rwxr-xr-x
+```
+
+can be interpreted as:
+
+```text
+rwx | r-x | r-x
+```
+
+Where:
+
+* Owner: read, write, execute
+* Group: read, execute
+* Others: read, execute
+
+---
+
+## Documentation
+
+Additional documentation for this lab is available below:
+
+* [Commands](./commands.md)
+* [Troubleshooting](./troubleshooting.md)
+* [Screenshots](./screenshots/)
 
 ---
 
 ## Outcome
 
-Successfully configured a Linux environment that allows authorized users to collaborate within a shared department while preventing unauthorized users from accessing protected resources. This lab demonstrates practical Linux administration skills commonly performed by IT Support Specialists, Help Desk Technicians, and Junior Linux Administrators.
+The lab successfully demonstrated how Linux user accounts, groups, ownership, and permissions can be combined to control access to company resources.
+
+The exercise also provided practical troubleshooting experience by requiring access permissions to be verified and corrected when users did not have the expected level of access.
+
+This represents a foundational Linux administration skill set applicable to IT support, system administration, and future cloud/DevOps environments.
+
