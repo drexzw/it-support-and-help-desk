@@ -1,26 +1,26 @@
 # New Employee Onboarding & Endpoint Security Hardening
 
+> **Ticket #HD-1147** | Priority: Medium | Requested by: Office Manager | Assigned to: Victor Z. (Junior IT Support Technician) | Status: Closed
+> **Subject:** Provision and harden a Linux endpoint for a new front-desk hire
+
 ## Project Overview
+
+BarberPro Studios LLC is a growing business that needs a repeatable, secure process for onboarding new employees onto its systems. This lab simulates the Help Desk ticket that comes in when a new hire starts: create their account, lock the endpoint down to a reasonable security baseline, and prove — not just claim — that it all actually works before closing the ticket.
 
 ## Business Scenario
 
-BarberPro Studios LLC is a growing business that requires a structured IT onboarding process for new employees.
+The new hire, **Jason Will** (`jwill`), was joining BarberPro's front-desk staff and needed a Linux endpoint account. As the Junior IT Support Technician on the ticket, my job was to:
 
-As a Junior IT Support Technician, my responsibility was to prepare a new employee environment by:
-
-- Creating user accounts
-- Configuring access permissions
-- Securing the endpoint environment
-- Verifying system readiness
-- Documenting the onboarding process
-
-This project simulates a real-world Help Desk ticket involving employee provisioning and endpoint security. The new hire, **Jason Will** (`jwill`), was being onboarded into the **front-desk-staff** group on a Linux endpoint.
+- Create the user account and put it in the right access group
+- Configure a password policy that meets baseline security expectations
+- Harden remote access to the box (SSH) so it isn't sitting wide open
+- Put a firewall and brute-force protection in front of it
+- Verify every control actually holds — against the real account, not just the config file
+- Document the process the way a help desk ticket write-up should read, including what broke and how I fixed it
 
 ---
 
 ## Objectives
-
-The goals of this project were:
 
 - Create and manage Linux user accounts
 - Assign users to appropriate groups
@@ -54,6 +54,19 @@ The goals of this project were:
 | Brute-force protection | `fail2ban`, `/etc/fail2ban/jail.local` |
 | Verification | `ss -tulpn`, `systemctl status`, `fail2ban-client status` |
 
+Every command run during the lab, grouped by phase, is in [`commands.md`](commands.md).
+
+---
+
+## Related Documentation
+
+| Doc | What's in it |
+|---|---|
+| [`commands.md`](commands.md) | Every command from this lab, grouped by phase — copy/paste reference |
+| [`docs/endpoint-security-report.md`](docs/endpoint-security-report.md) | Manager-facing summary: controls implemented, verification results, residual risk |
+| [`docs/troubleshooting.md`](docs/troubleshooting.md) | Full write-up of the issues hit during the build — symptom, root cause, fix, verification |
+| [`docs/deployment-checklist.md`](docs/deployment-checklist.md) | Sign-off checklist used to close the ticket |
+
 ---
 
 ## Implementation Walkthrough
@@ -84,7 +97,7 @@ PASS_WARN_AGE   14
 This enforces a 90-day max password age, a 7-day minimum between changes (to prevent password cycling), and a 14-day expiry warning.
 
 ### 4. Harden SSH — Move Off the Default Port
-`screenshots/04-ssh-port-2222-troubleshoot_socket-override-fix.png`
+`screenshots/04-ssh-port-change-socket-override-fix.png`
 
 Edited `/etc/ssh/sshd_config` and set the listening port to `2222`. Confirmed the change was staged with:
 ```
@@ -96,10 +109,10 @@ sudo systemctl edit ssh.socket
 sudo systemctl daemon-reload
 sudo systemctl restart ssh.socket
 ```
-After that, `ssh -p 2222 jwill@<server-ip>` connected and prompted for host key verification as expected.
+After that, `ssh -p 2222 jwill@<server-ip>` connected and prompted for host key verification as expected. Full breakdown in [`docs/troubleshooting.md`](docs/troubleshooting.md).
 
 ### 5. Install and Configure the Firewall
-`screenshots/05-installing-ufw.png`, `screenshots/06-installing-firewall-and-checking-status.png`
+`screenshots/05-install-ufw.png`, `screenshots/06-configure-ufw-status.png`
 
 UFW wasn't installed by default (`sudo: 'ufw': command not found`), so it was installed via `apt install ufw` along with its dependencies (`iptables`, `nftables`, etc.). Configured a default-deny posture:
 ```
@@ -111,9 +124,9 @@ sudo ufw enable
 Verified with `sudo ufw status verbose` — confirmed active, default deny incoming, and only 2222/tcp (v4 + v6) allowed in.
 
 ### 6. Set Up SSH Key-Based Authentication
-`screenshots/07-ssh-hardening.png.png`
+`screenshots/07-ssh-key-auth-setup.png`
 
-Backed up the working config first (`cp sshd_config sshd_config.bak`), then built out the `.ssh` directory structure for key-based login:
+Backed up the working config first (`sudo cp /etc/ssh/sshd_config /etc/ssh/sshd_config.bak`), then built out the `.ssh` directory structure for key-based login:
 ```
 mkdir -p ~/.ssh
 chmod 700 ~/.ssh
@@ -123,7 +136,7 @@ chmod 600 ~/.ssh/authorized_keys
 Validated the edited config with `sudo sshd -t` before restarting the service (`systemctl restart ssh`) — catches syntax errors before they lock you out of the session.
 
 ### 7. Restrict SSH Access by User
-`screenshots/14-chnagng-fail2ban-policy.png`
+`screenshots/08-restrict-ssh-by-user.png`
 
 Locked SSH down further in `sshd_config`:
 ```
@@ -138,7 +151,7 @@ Match User jwill
 Root login is disabled, only key-based auth is allowed by default, and only two named accounts can connect at all. `jwill` specifically gets a tighter `MaxAuthTries 3` to feed into the Fail2ban jail below.
 
 ### 8. Configure Fail2ban
-`screenshots/08-hardening-policy.png`
+`screenshots/09-fail2ban-jail-config.png`
 
 Set up `/etc/fail2ban/jail.local` to monitor SSH:
 ```
@@ -152,12 +165,12 @@ bantime  = 1h
 Three failed attempts within a 10-minute window triggers a 1-hour IP ban.
 
 ### 9. Verify SSH Is Listening Correctly
-`screenshots/09-checking-status.png.png`, `screenshots/10-looking-for-port.png.png`
+`screenshots/10-ssh-service-status.png`, `screenshots/11-ssh-port-listening-check.png`
 
 Confirmed via `systemctl status ssh` that the service was active and the log line explicitly showed `Server listening on 0.0.0.0 port 2222`. Double-checked with `ss -tulpn | grep ssh`, confirming `sshd` bound to `0.0.0.0:2222`.
 
 ### 10. Test the SSH Hardening End-to-End
-`screenshots/11-testing-ssh-changes.png.png`
+`screenshots/12-ssh-access-verification.png`
 
 Ran negative tests before positive ones:
 - `ssh jwill@<ip>` (no port) → refused — port 22 is closed, as expected.
@@ -168,16 +181,16 @@ Ran negative tests before positive ones:
 This confirmed the hardening was actually enforcing what it was supposed to: unauthorized users and the default port are both blocked, and key-based auth for the authorized account works.
 
 ### 11. Troubleshoot Fail2ban Startup Failure
-`screenshots/12-starting-fail2ban.png`, `screenshots/13-fail2ban-fails.png`
+`screenshots/13-fail2ban-start-failure.png`, `screenshots/14-fail2ban-troubleshooting.png`
 
 `systemctl start fail2ban` came up as `failed (Result: exit-code)`. Diagnosed with `fail2ban-client -t`, which returned:
 ```
 ERROR - Failed during configuration: While reading from '/etc/fail2ban/jail.conf' [line 282]: section 'sshd' already exists
 ```
-**Root cause:** a duplicate `[sshd]` section between the packaged `jail.conf` and the custom `jail.local`, left over from earlier edits/reinstalls. Attempted a package reinstall first (`apt-get install --reinstall fail2ban`), which didn't fully resolve it since the local override files persisted.
+**Root cause:** a duplicate `[sshd]` section between the packaged `jail.conf` and the custom `jail.local`, left over from earlier edits/reinstalls. Attempted a package reinstall first (`apt-get install --reinstall fail2ban`), which didn't fully resolve it since the local override files persisted. Full breakdown, including the dead ends, in [`docs/troubleshooting.md`](docs/troubleshooting.md).
 
 ### 12. Resolve the Fail2ban Conflict
-`screenshots/15-fixing-fail2ban.png`
+`screenshots/15-fail2ban-fix-verification.png`
 
 Fixed it by removing the stale local override files and rebuilding the jail config cleanly:
 ```
@@ -191,12 +204,12 @@ sudo fail2ban-client status sshd     # jail active, 0 currently banned
 **Lesson learned:** Fail2ban merges `jail.conf`, `jail.d/*.conf`, and `jail.local` — if the same section is defined in more than one of those, the parser fails outright rather than merging silently. Keeping all custom jail definitions in a single `jail.local` file (and clearing `jail.d`) avoids the conflict.
 
 ### 13. Final Firewall & Port Verification
-`screenshots/16-final-endpoint-readiness-check.png`
+`screenshots/16-final-firewall-port-check.png`
 
 Re-ran `ss -tulpn` and `ufw status verbose` after the Fail2ban fix to confirm nothing had regressed: `sshd` still listening only on `2222`, UFW still active with default-deny incoming and only `2222/tcp` allowed.
 
 ### 14. Final Endpoint Readiness Check — jwill Account
-`screenshots/17-final-endpoint-readiness.png.png`
+`screenshots/17-final-jwill-account-verification.png`
 
 Completed the onboarding by provisioning `jwill`'s own SSH key access and proving the security controls hold under real conditions:
 ```
@@ -218,7 +231,7 @@ Every control configured earlier in the lab — password aging, weak-password re
 
 ## Troubleshooting & Lessons Learned
 
-Two real issues came up during this build, and both are worth calling out because they reflect actual on-the-job debugging rather than a clean, scripted walkthrough:
+Two real issues came up during this build, and both are worth calling out because they reflect actual on-the-job debugging rather than a clean, scripted walkthrough. The full diagnostic trail — including the dead ends — is in [`docs/troubleshooting.md`](docs/troubleshooting.md).
 
 1. **SSH port change not taking effect** — `sshd_config` correctly specified port 2222, but connections kept refusing. The cause was `ssh.socket` overriding the daemon's listening port via socket activation. Fixed with a `systemctl edit ssh.socket` override, not a `sshd_config` change.
 2. **Fail2ban failing to start** — a duplicate `[sshd]` jail section across `jail.conf` and `jail.local` caused the config parser to fail outright. Fixed by consolidating all custom jail rules into a single `jail.local` and clearing `jail.d`.
@@ -236,3 +249,5 @@ By the end of this lab, the endpoint met the following state:
 - UFW active with default-deny incoming, allowing only the SSH port
 - Fail2ban actively monitoring SSH and banning after 3 failed attempts within 10 minutes
 - All controls verified against the live `jwill` account, not just assumed from config files
+
+See [`docs/deployment-checklist.md`](docs/deployment-checklist.md) for the sign-off checklist used to close this ticket, and [`docs/endpoint-security-report.md`](docs/endpoint-security-report.md) for the manager-facing summary.
