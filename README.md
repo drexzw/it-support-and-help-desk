@@ -66,7 +66,6 @@ The labs use a combination of local and cloud-based environments depending on th
 * Shared folders
 * Password resets
 * Account management
-* Windows Update troubleshooting
 * Remote Desktop
 * PowerShell
 
@@ -110,7 +109,7 @@ A new employee needs access to department resources while unauthorized users mus
 * Least-privilege principles
 * Access verification
 
-[View Lab →](https://github.com/drexzw/it-support-and-help-desk/tree/main/linux%20user%20management%20and%20file%20permissions)
+[View Lab →](https://github.com/drexzw/it-support-and-help-desk/tree/main/linux-user-management-and-file-permissions)
 
 ---
 
@@ -255,74 +254,39 @@ A user is unable to sign in and requires assistance with their account.
 
 [View Lab →](https://github.com/drexzw/it-support-and-help-desk/tree/main/windows-password-reset-and-account-unlock)
 
-> **Future expansion:** Active Directory-based password reset and account lockout troubleshooting will be incorporated into the Active Directory lab.
+> **Future expansion:** Active Directory-based password reset and account lockout troubleshooting is covered in the Active Directory lab below.
 
 ---
 
-## 08 — Windows Update Failure
+## 08 — Active Directory & Help Desk Administration
 
 **Scenario:**
-A Windows workstation is unable to successfully install an update.
+Simulate a small-business Windows domain environment (**BarberPro Studios LLC**) and practice the Active Directory administration and troubleshooting tasks a Help Desk technician would encounter day to day.
+
+### Environment
+
+* Domain: `corp.drexzw.local` (NetBIOS: `DREXZW`)
+* Windows Server 2022 Domain Controller + domain-joined Windows client
+* Hosted on AWS EC2
 
 ### Skills Demonstrated
 
-* Windows Update troubleshooting
-* Service investigation
-* System diagnostics
-* Connectivity checks
-* Update verification
-* Root-cause troubleshooting
-* Help Desk ticket documentation
+* Active Directory Domain Services deployment
+* Organizational Unit design across multiple departments (IT, HR, Finance, Sales, Management, Service Accounts, Workstations)
+* Security groups and user administration
+* Client domain join, verified from both the client and Domain Controller
+* Group Policy creation, linking, and refresh verification
+* Password and account lockout policy configuration
+* Domain authentication testing
+* Active Directory PowerShell (`Get-ADUser`, `Get-ADComputer`, `Get-ADOrganizationalUnit`, `Unlock-ADAccount`, and related cmdlets)
 
-[View Lab →](https://github.com/drexzw/it-support-and-help-desk/tree/main/windows-password-reset-and-account-unlock)
+### Troubleshooting Highlights
 
----
+Includes a full Help Desk-style account-lockout ticket: an account lockout was intentionally reproduced, investigated through Group Policy and Active Directory Users and Computers, resolved, and re-verified — plus five additional documented troubleshooting scenarios covering DNS, domain membership, computer-object visibility, authentication, and Group Policy application.
 
-# 🏢 Upcoming — Active Directory & Help Desk Administration
+[View Lab →](https://github.com/drexzw/it-support-and-help-desk/tree/main/active-directory-lab)
 
-The next major project will expand the portfolio into a simulated Windows domain environment.
-
-The goal is to connect several of the existing Help Desk skills into one realistic business environment.
-
-### Planned Environment
-
-```text
-                    BarberPro Studios LLC
-                            │
-                    Active Directory
-                            │
-          ┌─────────────────┼─────────────────┐
-          │                 │                 │
-        Users             Groups           Computers
-          │                 │                 │
-          └─────────────────┼─────────────────┘
-                            │
-                    Shared Resources
-                            │
-                    NTFS Permissions
-                            │
-                     Help Desk Tickets
-```
-
-### Planned Tasks
-
-* Deploy Windows Server
-* Configure Active Directory Domain Services
-* Configure DNS
-* Create organizational units
-* Create users
-* Create security groups
-* Join a Windows client to the domain
-* Perform password resets
-* Unlock user accounts
-* Manage group membership
-* Disable accounts
-* Troubleshoot access problems
-* Configure shared resources
-* Apply NTFS permissions
-* Document Help Desk tickets
-
-This lab will serve as the bridge between the individual Windows support labs and a more realistic enterprise-style support environment.
+> **Planned additions:** NTFS and file-share permissions, department-specific access control, additional Group Policy configurations, and further Help Desk tickets will extend this environment.
 
 ---
 
@@ -428,7 +392,6 @@ Through these projects, I am developing practical experience in:
 * NTFS permissions
 * Shared folders
 * User administration
-* Windows Update
 * Remote Desktop
 * Active Directory
 
@@ -512,11 +475,11 @@ The immediate focus of this repository is **IT Support and Help Desk**, with clo
 * [x] NTFS Permissions
 * [x] Shared Folder Access Denied
 * [x] Windows Password Reset & Account Unlock
-* [x] Windows Update Failure
+* [x] Active Directory & Help Desk Administration
 
 ### In Progress / Planned
 
-* [ ] Active Directory & Help Desk Administration
+* [ ] Extend Active Directory lab with NTFS/file-share permissions and additional tickets
 * [ ] Standardize documentation across existing labs
 * [ ] Improve screenshot organization and naming
 * [ ] Refine support-ticket documentation
@@ -564,5 +527,3 @@ Rather than focusing solely on certifications or theoretical coursework, I use t
 The goal of this portfolio is not to demonstrate that every lab was completed without problems.
 
 The goal is to demonstrate the ability to **investigate problems, understand their root causes, implement appropriate solutions, verify the results, and communicate the work clearly.**
-
-
