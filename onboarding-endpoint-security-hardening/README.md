@@ -62,7 +62,7 @@ Every command run during the lab, grouped by phase, is in [`commands.md`](comman
 
 | Doc | What's in it |
 |---|---|
-| [`commands.md`](commands.md) | Every command from this lab, grouped by phase — copy/paste reference |
+| [`commands.md`](docs/commands.md) | Every command from this lab, grouped by phase — copy/paste reference |
 | [`docs/endpoint-security-report.md`](docs/endpoint-security-report.md) | Manager-facing summary: controls implemented, verification results, residual risk |
 | [`docs/troubleshooting.md`](docs/troubleshooting.md) | Full write-up of the issues hit during the build — symptom, root cause, fix, verification |
 | [`docs/deployment-checklist.md`](docs/deployment-checklist.md) | Sign-off checklist used to close the ticket |
