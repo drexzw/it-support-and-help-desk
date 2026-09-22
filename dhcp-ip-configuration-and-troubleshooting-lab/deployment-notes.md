@@ -137,6 +137,8 @@ ipconfig /all
 
 **Note:** at the moment this screenshot was captured, the WiFi adapter had *not* received a DHCP-assigned IPv4 address and had self-assigned an APIPA address instead, despite `ipconfig /renew` succeeding moments earlier in Section 7. This is a real, unedited observation from the lab rather than a clean "expected" result — it's consistent with a brief DHCP negotiation delay/timeout on the adapter. The connectivity test in Section 9, run afterward, confirms the system had a valid DHCP-assigned address again by that point.
 
+*(This is the state captured in `05-dhcp-restored.png` — the filename refers to the overall step, not this specific transient reading.)*
+
 ---
 
 ## 9. Final Connectivity Verification
@@ -152,10 +154,10 @@ ping google.com
 
 ### Results
 
-- Loopback: `PASS` 
-- Default Gateway: `PASS` 
-- Internet IP: `PASS` 
-- DNS/Hostname: `PASS` 
+- Loopback: `PASS`
+- Default Gateway: `PASS`
+- Internet IP: `PASS`
+- DNS/Hostname: `PASS`
 
 ---
 
@@ -166,5 +168,3 @@ The Windows system was returned to automatic DHCP configuration.
 Final network connectivity was verified using local, gateway, Internet, and DNS tests, and all four passed with 0% packet loss.
 
 The lab demonstrated the process of inspecting and troubleshooting DHCP/IP configuration on a Windows workstation, including an unplanned but instructive moment where the adapter briefly fell back to an APIPA address before DHCP re-established a valid lease — a good example of the kind of transient DHCP behavior a help desk technician may need to recognize and confirm resolves on its own versus one that requires intervention.
-
-The lab demonstrated the process of inspecting and troubleshooting DHCP/IP configuration on a Windows workstation.
