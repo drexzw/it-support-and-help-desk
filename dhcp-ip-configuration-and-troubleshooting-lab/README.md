@@ -6,6 +6,23 @@ This lab demonstrates basic Windows IPv4 configuration and DHCP troubleshooting 
 
 The lab involved inspecting the system's current network configuration, testing network connectivity, releasing and renewing the DHCP lease, understanding static versus dynamic IPv4 configuration, and verifying that DHCP was restored successfully.
 
+## Before / After Summary
+
+| | Before Troubleshooting | After Troubleshooting |
+|---|---|---|
+| IPv4 Address | `192.168.0.155` | `192.168.0.155` (DHCP-assigned) |
+| Default Gateway | `192.168.0.1` | `192.168.0.1` |
+| DHCP Status | Enabled | Enabled — lease renewed |
+| DNS Servers | `68.105.28.11, 68.105.29.11, 68.105.28.12` | `68.105.28.11, 68.105.29.11, 68.105.28.12` |
+| Connectivity (loopback / gateway / internet / DNS) | Not yet tested | All 4 tests **PASS**, 0% packet loss |
+
+> Note: mid-process, the adapter briefly self-assigned an APIPA address (`169.254.177.112`) after `ipconfig /renew` — see [deployment-notes.md](./deployment-notes.md#8-dhcp-configuration-verification) for the full detail on that transient state.
+
+## Documentation
+
+- [commands.md](./commands.md) — full command reference (`ipconfig`, `ping`, `nslookup`, etc.) with explanations
+- [deployment-notes.md](./deployment-notes.md) — step-by-step log of the lab, in order, with recorded output at each stage
+
 ## Objectives
 
 * Inspect a Windows computer's IPv4 configuration
@@ -84,13 +101,13 @@ The lab used a layered troubleshooting approach:
 ## Screenshots
 
 | #  | Screenshot                       | Description                         |
-| -- | -------------------------------- | ----------------------------------- |
+| -- | --------------------------------- | ------------------------------------ |
 | 01 | `01-ipconfig-all.png`            | Initial IPv4 and DHCP configuration |
 | 02 | `02-gateway-ping.png`            | Connectivity to the default gateway |
 | 03 | `03-internet-dns-test.png`       | Internet and DNS connectivity tests |
 | 04 | `04-dhcp-renew.png`              | DHCP lease release and renewal      |
-| 05 | `05-dhcp-restored.png`           | DHCP configuration restored         |
-| 06 | `06-final-connectivity.png` | Final connectivity verification     |
+| 05 | `05-apipa-fallback.png`           | DHCP configuration restored         |
+| 06 | `06-final-connectivity.png`      | Final connectivity verification     |
 
 ## Skills Demonstrated
 
