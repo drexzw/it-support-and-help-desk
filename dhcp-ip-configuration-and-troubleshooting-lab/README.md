@@ -90,7 +90,7 @@ The lab used a layered troubleshooting approach:
 | 03 | `03-internet-dns-test.png`       | Internet and DNS connectivity tests |
 | 04 | `04-dhcp-renew.png`              | DHCP lease release and renewal      |
 | 05 | `05-dhcp-restored.png`           | DHCP configuration restored         |
-| 06 | `06-final-connectivity-test.png` | Final connectivity verification     |
+| 06 | `06-final-connectivity.png` | Final connectivity verification     |
 
 ## Skills Demonstrated
 
