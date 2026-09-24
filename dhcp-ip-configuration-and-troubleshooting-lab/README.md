@@ -1,131 +1,95 @@
 # DHCP / IP Configuration & Troubleshooting Lab
 
-## Overview
+## Scenario
 
-This lab demonstrates basic Windows IPv4 configuration and DHCP troubleshooting techniques commonly used in IT support and help-desk environments.
+**Ticket:** Secondary network adapter on server `EC2AMAZ-VQU1ICD` is not obtaining a valid IP address via DHCP and cannot reach the network.
 
-The lab involved inspecting the system's current network configuration, testing network connectivity, releasing and renewing the DHCP lease, understanding static versus dynamic IPv4 configuration, and verifying that DHCP was restored successfully.
+**User Report:** *"The secondary NIC on the Windows server isn't getting an IP from DHCP. It looks like it might have been manually configured at some point. Can you check it and restore normal connectivity?"*
 
-## Before / After Summary
-
-| | Before Troubleshooting | After Troubleshooting |
-|---|---|---|
-| IPv4 Address | `192.168.0.155` | `192.168.0.155` (DHCP-assigned) |
-| Default Gateway | `192.168.0.1` | `192.168.0.1` |
-| DHCP Status | Enabled | Enabled — lease renewed |
-| DNS Servers | `68.105.28.11, 68.105.29.11, 68.105.28.12` | `68.105.28.11, 68.105.29.11, 68.105.28.12` |
-| Connectivity (loopback / gateway / internet / DNS) | Not yet tested | All 4 tests **PASS**, 0% packet loss |
-
-> Note: mid-process, the adapter briefly self-assigned an APIPA address (`169.254.177.112`) after `ipconfig /renew` — see [deployment-notes.md](./deployment-notes.md#8-dhcp-configuration-verification) for the full detail on that transient state.
+Full details in [support-ticket.md](./support-ticket.md).
 
 ## Documentation
 
-- [commands.md](./commands.md) — full command reference (`ipconfig`, `ping`, `nslookup`, etc.) with explanations
-- [deployment-notes.md](./deployment-notes.md) — step-by-step log of the lab, in order, with recorded output at each stage
+- [support-ticket.md](./support-ticket.md) — the simulated help-desk ticket: report, root cause, resolution, closure
+- [deployment-notes.md](./deployment-notes.md) — full technical log, command-by-command, with recorded output
 
-## Objectives
+## Overview
 
-* Inspect a Windows computer's IPv4 configuration
-* Identify the IPv4 address, subnet mask, default gateway, DHCP server, and DNS servers
-* Test local and network connectivity using `ping`
-* Release and renew a DHCP lease
-* Understand the difference between DHCP and static IP addressing
-* Identify an APIPA address and understand what it can indicate
-* Restore the system to automatic DHCP configuration
-* Document troubleshooting steps in a help-desk format
+This lab demonstrates diagnosing and resolving a DHCP/IP misconfiguration on a Windows Server EC2 instance. Rather than observing a healthy DHCP renewal, this version of the lab deliberately introduces a real fault — a static IP misconfigured outside the valid subnet range on a secondary network adapter — then walks through diagnosis, resolution, and verification, the way an actual help-desk ticket would be worked.
+
+A second Elastic Network Interface (ENI) was attached to the instance specifically so the fault could be introduced and fixed without risking the adapter carrying the active Remote Desktop session.
 
 ## Environment
 
-* Operating System: Windows
-* Network Configuration: IPv4
-* Address Assignment: DHCP
+* Platform: AWS EC2 (Windows Server), region `us-east-2`
+* Hostname: `EC2AMAZ-VQU1ICD`
+* Network adapters:
+  * **Ethernet 3** — primary adapter, carries the RDP session, left untouched throughout
+  * **Test-NIC** (originally "Ethernet 2") — secondary adapter, used for the fault/fix
 * Primary Tools:
-
-  * Command Prompt
+  * PowerShell / Command Prompt
   * `ipconfig`
   * `ping`
-  * Windows Network Connections
-  * IPv4 Properties
+  * Windows Network Connections (`ncpa.cpl`)
+
+## Objectives
+
+* Attach and configure a secondary network interface on an EC2 instance
+* Identify a DHCP/IP misconfiguration using `ipconfig /all`
+* Reproduce and confirm a connectivity failure caused by an incorrect static IP
+* Diagnose the root cause via the adapter's IPv4 properties
+* Resolve the issue by restoring automatic DHCP configuration
+* Verify the fix and document the incident in help-desk ticket format
 
 ## Key Concepts
 
 ### DHCP
 
-Dynamic Host Configuration Protocol (DHCP) automatically provides network configuration information to clients.
+Dynamic Host Configuration Protocol (DHCP) automatically provides network configuration information to clients, including IPv4 address, subnet mask, default gateway, and DNS servers.
 
-This can include:
+### Static IP Misconfiguration
 
-* IPv4 address
-* Subnet mask
-* Default gateway
-* DNS server information
-* DHCP lease information
+When an adapter is manually assigned an IP address outside its actual subnet, it can no longer reach the correct gateway or any other host on the real network, even though the adapter itself shows as "up."
 
-### IPv4 Address
+### Elastic Network Interface (ENI)
 
-The IPv4 address identifies a device on an IP network.
-
-### Subnet Mask
-
-The subnet mask determines which portion of an IPv4 address represents the network and which portion represents the host.
-
-### Default Gateway
-
-The default gateway is normally the router used by the computer to communicate with devices outside its local network.
-
-### DNS
-
-Domain Name System (DNS) translates human-readable hostnames such as `google.com` into IP addresses.
-
-### APIPA
-
-Windows can automatically assign an address in the `169.254.x.x` range when it cannot obtain a normal IPv4 configuration through DHCP.
-
-A 169.254.x.x address can therefore be an important troubleshooting clue when investigating DHCP problems.
+An ENI is a virtual network interface that can be attached to an EC2 instance. A single instance can have multiple ENIs, each with its own IP configuration — used here to safely isolate the test adapter from the one carrying the management (RDP) connection.
 
 ## Troubleshooting Method
 
-The lab used a layered troubleshooting approach:
-
-1. Inspect the IP configuration.
-2. Test the local TCP/IP stack.
-3. Test the default gateway.
-4. Test Internet connectivity using an IP address.
-5. Test DNS resolution using a hostname.
-6. Release the existing DHCP lease.
-7. Renew the DHCP lease.
-8. Verify the resulting configuration.
-9. Restore automatic DHCP settings.
-10. Perform final connectivity tests.
+1. Record the healthy baseline configuration and connectivity on both adapters.
+2. Introduce a static IP misconfiguration on the secondary adapter only.
+3. Reproduce the resulting connectivity failure.
+4. Diagnose the root cause via the adapter's IPv4 properties.
+5. Restore automatic DHCP configuration.
+6. Verify the adapter receives a valid lease and document the outcome.
 
 ## Screenshots
 
-| #  | Screenshot                       | Description                         |
-| -- | --------------------------------- | ------------------------------------ |
-| 01 | `01-ipconfig-all.png`            | Initial IPv4 and DHCP configuration |
-| 02 | `02-gateway-ping.png`            | Connectivity to the default gateway |
-| 03 | `03-internet-dns-test.png`       | Internet and DNS connectivity tests |
-| 04 | `04-dhcp-renew.png`              | DHCP lease release and renewal      |
-| 05 | `05-apipa-fallback.png`           | DHCP configuration restored         |
-| 06 | `06-final-connectivity.png`      | Final connectivity verification     |
+| # | Screenshot | Description |
+|---|---|---|
+| 01 | `01-baseline-config.png` | Both adapters healthy, DHCP-assigned (`ipconfig /all`) |
+| 02 | `02-baseline-connectivity.png` | Loopback, gateway, internet, and DNS tests all passing |
+| 03 | `03-misconfigured-static-ip.png` | Test-NIC manually set to a static IP outside the valid subnet |
+| 04 | `04-failed-gateway-ping.png` | Ping to the expected gateway fails — 100% loss |
+| 05 | `05-diagnosis-static-ip-found.png` | IPv4 Properties dialog confirming the misconfigured static IP |
+| 06 | `06-dhcp-fix-applied.png` | Release/renew on Test-NIC — valid DHCP-assigned IP restored |
+
+*A final post-fix connectivity re-test (ping to the restored gateway) was not captured as a separate screenshot; screenshot 06 confirms the adapter received a valid DHCP lease and gateway, but a dedicated ping-based verification screenshot is not pictured.*
 
 ## Skills Demonstrated
 
+* AWS EC2 network interface configuration
 * Windows network troubleshooting
-* IPv4 configuration
-* DHCP troubleshooting
-* DNS troubleshooting fundamentals
+* DHCP/IP fault diagnosis and resolution
 * Connectivity testing
-* Command-line troubleshooting
-* Help-desk diagnostic reasoning
-* Technical documentation
+* Command-line and GUI-based network administration
+* Help-desk incident documentation
 
 ## Result
 
-The system was returned to automatic DHCP configuration and final connectivity testing was performed to verify network functionality.
+The misconfigured static IP on the secondary adapter was identified and corrected by restoring automatic DHCP configuration. The adapter received a valid IP address, subnet mask, and gateway from the DHCP server, matching its original baseline configuration.
 
 ## Lessons Learned
 
-This lab demonstrated that network troubleshooting should be performed systematically rather than by randomly changing settings.
-
-Testing the loopback address, default gateway, public IP address, and hostname provides useful information about where a connectivity failure may be occurring.
+Manually reviewing an adapter's IPv4 properties directly confirmed the root cause faster than relying on `ipconfig` output alone. Isolating the test scenario onto a secondary network interface allowed the fault to be safely introduced and resolved without risking the active management connection to the instance — a practical example of why production troubleshooting is often done on non-critical interfaces first.
