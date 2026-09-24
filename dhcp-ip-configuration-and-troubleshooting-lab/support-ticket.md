@@ -1,144 +1,55 @@
-# Support Ticket — DHCP / IP Configuration Issue
+# Support Ticket
 
-## Ticket Information
-
-**Ticket ID:** DHCP-001
-**Category:** Network Connectivity
+**Ticket ID:** HD-2026-0142
+**Date Opened:** September 24, 2026
 **Priority:** Medium
-**Status:** Resolved
-**Affected Device:** Windows workstation
-
----
+**Category:** Network / DHCP
+**Reported By:** End User
+**Assigned To:** IT Support Technician
 
 ## User Report
 
-**Issue:**
+> "The secondary network adapter on the Windows server isn't getting an IP address from DHCP. It looks like it might have been manually configured with a static address at some point. Can you check it and get it back on DHCP?"
 
-User reported a loss of network connectivity and requested assistance troubleshooting the workstation's IP configuration.
+## Environment
 
----
+* Server: `EC2AMAZ-VQU1ICD` (AWS EC2, Windows Server, `us-east-2`)
+* Affected adapter: secondary network interface (`Test-NIC`)
+* Primary adapter (RDP/management connection): unaffected, left untouched throughout
 
-## Initial Investigation
+## Diagnostic Steps
 
-The technician began by checking the workstation's network configuration:
+1. Reviewed baseline configuration on both adapters using `ipconfig /all` — both were healthy and DHCP-assigned. *(Screenshot 01)*
+2. Confirmed baseline connectivity (loopback, gateway, internet, DNS) on the working configuration. *(Screenshot 02)*
+3. Re-ran `ipconfig /all` on the affected adapter and found `DHCP Enabled: No`, with a static IP (`10.0.0.30`) outside the instance's actual subnet range. *(Screenshot 03)*
+4. Attempted to ping the address the misconfigured adapter believed to be its gateway (`10.0.0.1`) — request timed out, 100% packet loss, confirming the connectivity failure. *(Screenshot 04)*
+5. Opened the adapter's IPv4 Properties and confirmed "Use the following IP address" was selected with the incorrect static IP and gateway manually entered. *(Screenshot 05)*
 
-```cmd
-ipconfig /all
-```
+## Root Cause
 
-The following information was reviewed:
-
-* IPv4 address
-* Subnet mask
-* Default gateway
-* DHCP status
-* DHCP server
-* DNS servers
-
----
-
-## Troubleshooting Performed
-
-### 1. Local TCP/IP Test
-
-```cmd
-ping 127.0.0.1
-```
-
-The loopback test was performed to verify the local TCP/IP stack.
-
-**Result:** `[PASS]`
-
-### 2. Default Gateway Test
-
-```cmd
-ping [DEFAULT GATEWAY]
-```
-
-This tested communication between the workstation and its local gateway.
-
-**Result:** `[PASS]`
-
-### 3. External IP Test
-
-```cmd
-ping 8.8.8.8
-```
-
-This tested external connectivity without relying on DNS hostname resolution.
-
-**Result:** `[PASS]`
-
-### 4. DNS Test
-
-```cmd
-ping google.com
-```
-
-This tested hostname resolution and external connectivity.
-
-**Result:** `[PASS]`
-
-### 5. DHCP Lease Renewal
-
-The existing DHCP configuration was released:
-
-```cmd
-ipconfig /release
-```
-
-A new DHCP lease was then requested:
-
-```cmd
-ipconfig /renew
-```
-
-The resulting IP configuration was verified with:
-
-```cmd
-ipconfig /all
-```
-
----
+The secondary network adapter had been manually configured with a static IPv4 address and gateway that did not belong to the instance's actual VPC subnet, preventing it from communicating with the real gateway or any other host on the network.
 
 ## Resolution
 
-The workstation was returned to automatic DHCP configuration.
+1. In the adapter's IPv4 Properties, changed the setting back to "Obtain an IP address automatically."
+2. Ran `ipconfig /release "Test-NIC"` followed by `ipconfig /renew "Test-NIC"`.
+3. The adapter obtained a valid DHCP-assigned IPv4 address, subnet mask, and gateway, matching its original baseline configuration. *(Screenshot 06)*
 
-The final configuration was verified and connectivity was tested again.
+## Verification
 
-Final tests included:
+`ipconfig /all` after the fix confirms the adapter is back on DHCP with a valid lease and gateway. *(Screenshot 06)*
 
-```cmd
-ping 127.0.0.1
-ping [DEFAULT GATEWAY]
-ping 8.8.8.8
-ping google.com
-```
-
-**Final Result:** `[Resolved ]`
-
----
-
-
+> Note: a dedicated post-fix ping test to the restored gateway was not captured as a separate screenshot. The DHCP lease and gateway shown in Screenshot 06 confirm the configuration was restored, but connectivity was not re-verified with a fresh ping screenshot at time of writing.
 
 ## Technician Notes
 
-The troubleshooting process demonstrated the importance of isolating network problems by testing connectivity at different layers.
+The primary network adapter carrying the active Remote Desktop session was never modified. The fault was isolated to a secondary ENI attached to the instance specifically for this purpose, avoiding any risk of losing remote access while reproducing and resolving the issue.
 
-Testing the gateway, an external IP address, and a hostname helps distinguish between local network, Internet connectivity, and DNS-related problems.
+## Recommended Follow-Up
 
-A `169.254.x.x` APIPA address would be an important indicator of a possible DHCP configuration or connectivity problem.
+* Capture a final ping-based connectivity screenshot to fully close out verification.
+* Periodically audit adapters for manually-set static configurations that may have been left over from prior troubleshooting or testing.
 
----
+## Ticket Status
 
-## Skills Demonstrated
-
-* Windows network troubleshooting
-* DHCP lease management
-* IPv4 configuration
-* DNS troubleshooting
-* Connectivity testing
-* Command Prompt
-* Technical documentation
-* Help-desk troubleshooting methodology
+**Resolved** — pending final connectivity screenshot for complete verification.
