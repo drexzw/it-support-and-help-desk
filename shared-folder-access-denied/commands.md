@@ -1,129 +1,164 @@
-# Shared Folder Access Denied - Troubleshooting Log
+# Commands and Troubleshooting Log
 
-This document contains the PowerShell commands used during the troubleshooting process, along with the reasoning behind each step.
+Commands used in this lab, in the order they appear in the screenshots, with the reasoning behind each. Output shown is copied from the screenshots. Anything not captured is listed separately at the end.
 
 ---
 
-## User Account Management
+## 1. Account setup (screenshot 01)
 
-### Create Test Users
+Run in an elevated PowerShell session ("Administrator: Windows PowerShell").
 
-Created two local user accounts to simulate employees.
+### Create the test accounts
 
 ```powershell
-net user employee1 Password123! /add
-net user employee2 Password123! /add
+net user employee1 <password> /add
+net user employee2 <password> /add
 ```
 
-### View Local User Accounts
+Creates two local accounts to simulate employees. Each returned `The command completed successfully.`
 
-Used to verify that the accounts were created successfully.
+> Passwords are redacted in the screenshot and replaced with `<password>` here. Typing a password directly on the command line leaves it in the console and shell history. `net user employee1 * /add` prompts for the password instead.
+
+### List local accounts
 
 ```powershell
 net user
 ```
 
-### Check Current Logged-In User
+Confirms both accounts exist. The output lists `Administrator`, `DefaultAccount`, `employee1`, `employee2`, `Guest`, `WDAGUtilityAccount`, and the technician's own account (redacted).
 
-Used to confirm which account was experiencing the issue.
+---
+
+## 2. Identify the affected account (screenshot 05)
+
+Run in a standard (non-elevated) PowerShell session.
 
 ```powershell
 whoami
 ```
 
-Example output:
+Output:
 
 ```
-DESKTOP-PC\employee2
+victor\employee2
 ```
+
+Confirms which account was experiencing the problem.
 
 ---
 
-## Permission Investigation
+## 3. Inspect permissions (screenshot 06)
 
-### View Folder Permissions
-
-Used to check the current NTFS permissions assigned to the folder.
+Run in an elevated PowerShell session.
 
 ```powershell
 icacls C:\Company-Data\Finance
 ```
 
-Example output:
+Output:
 
 ```
-Victor\employee1:(OI)(CI)(RX)
-Victor\employee2:(OI)(CI)(DENY)(Rc,RD,REA,X,RA)
+C:\Company-Data\Finance Victor\employee2:(OI)(CI)(DENY)(Rc,RD,REA,X,RA)
+                        Victor\employee1:(OI)(CI)(RX)
+                        BUILTIN\Administrators:(I)(OI)(CI)(F)
+                        NT AUTHORITY\SYSTEM:(I)(OI)(CI)(F)
+                        BUILTIN\Users:(I)(OI)(CI)(RX)
+                        NT AUTHORITY\Authenticated Users:(I)(M)
+                        NT AUTHORITY\Authenticated Users:(I)(OI)(CI)(IO)(M)
 ```
 
-This revealed the real problem: `employee2` had an existing **DENY** entry blocking read/execute access — not just a missing grant.
+The first line is the problem: `employee2` has an explicit DENY, and no explicit ALLOW entry.
+
+### Reading the `icacls` output
+
+| Notation | Meaning |
+|---|---|
+| `(OI)` | Object inherit: applies to files inside the folder |
+| `(CI)` | Container inherit: applies to subfolders |
+| `(IO)` | Inherit only: applies to children, not the folder itself |
+| `(I)` | Permission is inherited from a parent folder |
+| `(F)` | Full control |
+| `(M)` | Modify |
+| `(RX)` | Read and execute |
+| `(DENY)` | The entry blocks the listed rights |
+| `Rc` | Read permissions |
+| `RD` | Read data / list folder |
+| `REA` | Read extended attributes |
+| `X` | Execute / traverse |
+| `RA` | Read attributes |
 
 ---
 
-## Permission Resolution
+## 4. Add an explicit allow, then remove the DENY (screenshot 07)
 
-### First attempt (failed): unquoted parentheses
-
-```powershell
-icacls C:\Company-Data\Finance /grant employee2:(RX)
-```
-
-PowerShell parses parentheses as its own syntax, so it tried to run `RX` as a separate command and threw `CommandNotFoundException`.
-
-### Fix: wrap the permission string in quotes
+### Grant Read and Execute
 
 ```powershell
 icacls C:\Company-Data\Finance /grant "employee2:(RX)"
 ```
 
-This succeeded, but access was **still denied** — because the existing DENY entry from earlier in the lab overrides any ALLOW entry, regardless of order.
+Output: `processed file: C:\Company-Data\Finance` and `Successfully processed 1 files; Failed processing 0 files`.
 
-### Remove the conflicting DENY entry
+The permission string is wrapped in quotes because PowerShell treats unquoted parentheses as its own syntax.
+
+Re-running `icacls` afterwards showed **both** entries for `employee2` in the ACL:
+
+```
+Victor\employee2:(OI)(CI)(DENY)(Rc,RD,REA,X,RA)
+Victor\employee2:(RX)
+```
+
+Note that the new entry is `(RX)` with **no `(OI)(CI)`**, so it applies to the folder itself only, not to its contents. The DENY entry does have `(OI)(CI)`.
+
+### Remove the DENY entry
 
 ```powershell
 icacls C:\Company-Data\Finance /remove:d "employee2"
 ```
 
-`/remove:d` removes only DENY entries for the specified user, leaving the ALLOW entry intact.
+`/remove:d` removes only the DENY entries for the named user and leaves ALLOW entries in place.
 
-### Verify Permission Changes
+### Verify
 
 ```powershell
 icacls C:\Company-Data\Finance
 ```
 
-Expected result:
+Output (first lines):
 
 ```
-Victor\employee2:(RX)
+C:\Company-Data\Finance Victor\employee2:(RX)
+                        Victor\employee1:(OI)(CI)(RX)
+                        BUILTIN\Administrators:(I)(OI)(CI)(F)
+                        ...
 ```
+
+The DENY entry is gone.
 
 ---
 
-## Troubleshooting Process Summary
+## Troubleshooting Sequence Summary
 
-1. **Identify affected user**
-   ```powershell
-   whoami
-   ```
-2. **Check existing permissions**
-   ```powershell
-   icacls C:\Company-Data\Finance
-   ```
-3. **Attempt to grant permissions** (hit a PowerShell parsing error on unquoted parentheses)
-   ```powershell
-   icacls C:\Company-Data\Finance /grant "employee2:(RX)"
-   ```
-4. **Discover a conflicting DENY entry** was still blocking access despite the successful grant
-5. **Remove the DENY entry**
-   ```powershell
-   icacls C:\Company-Data\Finance /remove:d "employee2"
-   ```
-6. **Verify the fix**
-   ```powershell
-   icacls C:\Company-Data\Finance
-   ```
+1. `whoami` to confirm the affected account (`employee2`)
+2. `icacls` to read the full ACL and find the explicit DENY
+3. `icacls /grant "employee2:(RX)"` to add an explicit allow; the ACL then shows both entries
+4. `icacls /remove:d "employee2"` to remove the DENY
+5. `icacls` again to confirm the DENY is gone; the folder then opens (screenshot 08)
 
 ## Key Takeaway
 
-In NTFS, **DENY always overrides ALLOW**, regardless of the order permissions were applied in. A successful `/grant` command can still leave a user locked out if a conflicting DENY entry exists elsewhere on the ACL — always check `icacls` output in full, not just confirm the grant command ran without error.
+An explicit DENY takes precedence over ALLOW entries, including inherited ones such as `BUILTIN\Users:(I)(OI)(CI)(RX)`. A successful `/grant` does not fix a DENY. Read the whole ACL before changing anything.
+
+---
+
+## Not Pictured
+
+These parts of the lab were **not captured** in screenshots:
+
+- **The command that created the DENY entry for `employee2`.** Screenshot 03 shows the Security list before `employee2` appears in the ACL, and screenshot 06 shows the DENY in place. The step between them was not recorded.
+- **The first grant attempt without quotes**, which failed with a PowerShell parsing error (`CommandNotFoundException`) before the quoted version was used:
+  ```powershell
+  icacls C:\Company-Data\Finance /grant employee2:(RX)
+  ```
+- **An access re-test after the grant and before the DENY removal.**
+- **Which account was logged in for screenshots 04 and 08.**
