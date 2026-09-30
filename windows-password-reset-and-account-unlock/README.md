@@ -1,78 +1,95 @@
-# Windows Password Reset & Account Unlock
+# Windows Local Password Reset & Account Enable/Disable
 
 ## Project Overview
 
-This project simulates a real-world Help Desk support ticket where a user is unable to access their Windows account after forgetting their password. The objective is to investigate the issue, verify the account, reset the password, and document the troubleshooting process following a standard Help Desk workflow.
+This lab simulates a Help Desk request in which a user reports being unable to sign in after forgetting their Windows password. Using an elevated Command Prompt, I created a test account, checked its status, reset its password, confirmed the reset, disabled and re-enabled the account, and then removed the test account.
 
-The project was completed on **Windows 11 Home**, demonstrating that many fundamental user account management tasks can be practiced without a Windows Server or Active Directory environment.
+Everything in this lab was done on a **local Windows 11 machine** using the built-in `net user` command. No Active Directory or Windows Server was involved. For the domain-based version of account handling (Group Policy lockout settings and a documented lockout ticket), see the [Active Directory lab](../active-directory-lab/README.md).
 
 ---
 
 ## Scenario
 
-A user contacted the IT Help Desk after becoming locked out of their Windows account due to multiple failed login attempts. As the assigned Help Desk technician, I investigated the issue, verified the user's account information, reset the password, confirmed account accessibility, and documented the resolution.
+A simulated user (John Smith, account `jsmith`) reports that he forgot his password after returning from vacation. As the Help Desk technician, I verified that the account exists and is active, reset the password to a temporary one, and confirmed the reset by checking the account's **Password last set** value.
+
+---
+
+## Environment
+
+| Item | Detail |
+| ---- | ------ |
+| Operating system | Windows 11 (build 10.0.26200.8875, shown in screenshot 00) |
+| Account type | Local user account (`jsmith`), member of the local `Users` group |
+| Tool | Command Prompt, run as Administrator |
+| Command | `net user` |
+
+---
+
+## Evidence
+
+| # | Screenshot | What it shows |
+| - | ---------- | ------------- |
+| 00 | [Admin Command Prompt](screenshots/00-command-prompt-admin.png) | Elevated Command Prompt opened |
+| 01 | [Existing users](screenshots/01-existing-users.png) | `net user` listing local accounts before `jsmith` exists |
+| 02 | [User created](screenshots/02-user-created.png) | `jsmith` created with `/add` |
+| 03 | [User information](screenshots/03-user-information.png) | `net user jsmith`: Account active = Yes, Password last set = 03/08/2026 14:02:35, Last logon = Never |
+| 04 | [Password reset](screenshots/04-password-reset.png) | Password reset command completed successfully |
+| 05 | [Password last set](screenshots/05-password-last-set.png) | Password last set changed to 03/08/2026 14:08:45, confirming the reset |
+| 06 | [Account disabled](screenshots/06-account-disabled.png) | `/active:no` applied, Account active = No |
+| 07 | [Account enabled](screenshots/07-account-enabled.png) | `/active:yes` applied, Account active = Yes |
+| 08 | [User deleted](screenshots/08-user-deleted.png) | Test account removed, no longer listed by `net user` |
+
+Dates are shown as displayed by the system (DD/MM/YYYY).
+
+---
+
+## Not Pictured
+
+To keep this documentation accurate, the following are **not** shown in the screenshots and are not claimed as completed:
+
+* A lockout caused by failed sign-in attempts (the user report mentions failed attempts, but no lockout state was reproduced)
+* Unlocking a locked account
+* Identity verification of the caller
+* The user signing in with the temporary password (Last logon still shows "Never" in screenshots 05 and 07)
+* Forcing a password change at next sign-in
 
 ---
 
 ## Skills Demonstrated
 
-* Windows User Management
-* Password Reset Procedures
-* Local User Administration
-* Command Prompt Administration
-* Help Desk Troubleshooting
-* Technical Documentation
-* Ticket Lifecycle Management
-
----
-
-## Tools Used
-
-* Windows 11 Home
-* Command Prompt (Administrator)
-* Windows User Account Management
-* `net user` command
-* Git
-* GitHub
-* Markdown
+* Creating and removing local user accounts with `net user`
+* Reading account status: active state, password last set, password expiry, group membership
+* Resetting a local account password from an elevated Command Prompt
+* Verifying a change using evidence from the system (Password last set timestamp)
+* Disabling and re-enabling an account
+* Writing a Help Desk ticket that separates what was done from what was not verified
 
 ---
 
 ## Repository Contents
 
-| File                  | Purpose                                                            |
-| --------------------- | ------------------------------------------------------------------ |
-| **README.md**         | Project overview and objectives                                    |
-| **commands.md**       | Commands used throughout the lab with explanations                 |
-| **support-ticket.md** | Simulated Help Desk ticket documenting the troubleshooting process |
-| **screenshots/**      | Evidence of each step completed during the project                 |
-
----
-
-## Screenshots
-
-The screenshots folder contains evidence of:
-
-* Creating the local user
-* Viewing account information
-* Resetting the password
-* Verifying the account
-* Successful completion of the task
+| File | Purpose |
+| ---- | ------- |
+| **README.md** | Overview, evidence map, and limitations |
+| **commands.md** | Commands used, with the screenshot each one appears in |
+| **support-ticket.md** | Simulated ticket HD-001 with investigation, resolution, and work notes |
+| **screenshots/** | Numbered evidence for each step |
 
 ---
 
 ## What I Learned
 
-This project strengthened my understanding of Windows local user administration and demonstrated how password reset requests are handled in a Help Desk environment. It also reinforced the importance of documenting work clearly and following a structured troubleshooting process.
+* `net user <name>` shows the fields a technician needs first: whether the account is active, when the password was last set, when it expires, and whether a sign-in has ever happened.
+* The **Password last set** timestamp gives objective proof that a reset took place. It changed from 14:02:35 to 14:08:45 between screenshots 03 and 05.
+* A disabled account and a locked-out account are different problems. Disabling (`/active:no`) is an administrator action, while a lockout is triggered by failed sign-ins under a lockout policy. This lab covers the first; the Active Directory lab covers the second.
+* Typing a password directly into a command puts it on screen and in the console history. In a real environment I would avoid that.
 
 ---
 
 ## Future Improvements
 
-Future versions of this project will include:
-
-* Active Directory user management
-* Account lockout policies
-* Password expiration management
-* Remote support scenarios
-* ServiceNow-style ticket documentation
+* Reproduce a real local lockout by setting a lockout threshold, failing sign-ins on purpose, and documenting the unlock
+* Add a screenshot of the user signing in with the temporary password
+* Force a password change at next sign-in
+* Document an identity-verification step before any reset
+* Handle the same request in Active Directory (see the [AD lab](../active-directory-lab/README.md))
