@@ -83,4 +83,4 @@ Removes the local account. Used for cleanup after the lab.
 
 ## Note on Typing Passwords
 
-In this lab the passwords were typed directly into the command, so they appear on screen and in the console history. This was acceptable for a throwaway test account. For real accounts, running `net user <name> *` prompts for the password without displaying it. That method was not used or pictured in this lab.
+In this lab the passwords were typed directly into the command, so they appear on screen and in the console history. This was acceptable for a throwaway test account. For real accounts, running `net user <username> *` prompts for the password without displaying it. That method was not used or pictured in this lab.
