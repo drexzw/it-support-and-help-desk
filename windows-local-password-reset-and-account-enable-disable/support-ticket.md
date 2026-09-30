@@ -36,7 +36,7 @@
 | Previous sign-in | Last logon = Never | [Screenshot 03](screenshots/03-user-information.png) |
 | Group membership | Local group `Users` only | [Screenshot 03](screenshots/03-user-information.png) |
 
-**Finding:** The account exists, is active, and its password has not expired, so the account is not disabled and the password is not expired. A password reset was chosen as the resolution.
+**Finding:** The account exists, is active, and its password has not expired, so the reported problem is consistent with a forgotten password. A password reset was chosen as the resolution.
 
 **Note on the lockout:** The user mentions failed login attempts. No lockout state was reproduced or pictured in this lab, so a lockout was not confirmed. Lockout handling is documented in the [Active Directory lockout ticket](../active-directory-lab/tickets/account-lockout-sarah-johnson.md).
 
