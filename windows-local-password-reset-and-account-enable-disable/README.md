@@ -79,7 +79,7 @@ To keep this documentation accurate, the following are **not** shown in the scre
 
 ## What I Learned
 
-* `net user <name>` shows the fields a technician needs first: whether the account is active, when the password was last set, when it expires, and whether a sign-in has ever happened.
+* `net user <username>` shows the fields a technician needs first: whether the account is active, when the password was last set, when it expires, and whether a sign-in has ever happened.
 * The **Password last set** timestamp gives objective proof that a reset took place. It changed from 14:02:35 to 14:08:45 between screenshots 03 and 05.
 * A disabled account and a locked-out account are different problems. Disabling (`/active:no`) is an administrator action, while a lockout is triggered by failed sign-ins under a lockout policy. This lab covers the first; the Active Directory lab covers the second.
 * Typing a password directly into a command puts it on screen and in the console history. In a real environment I would avoid that.
