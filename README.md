@@ -215,7 +215,7 @@ Users require different levels of access to files and folders based on their res
 * Remote Desktop
 * Cloud-hosted Windows environments
 
-[View Lab →](https://github.com/drexzw/it-support-and-help-desk/tree/main/nfts-permissions-lab)
+[View Lab →](https://github.com/drexzw/it-support-and-help-desk/tree/main/ntfs-permissions-lab)
 
 ---
 
@@ -237,24 +237,23 @@ A user reports that they cannot access a shared business resource that they are 
 
 ---
 
-## 07 — Windows Password Reset & Account Unlock
+## 07 — Windows Local Password Reset & Account Enable/Disable
 
 **Scenario:**
-A user is unable to sign in and requires assistance with their account.
+A user reports being unable to sign in after forgetting their Windows password. On a local Windows 11 machine, I checked the account status, reset the password, confirmed the reset using the Password last set timestamp, and practiced disabling and re-enabling the account.
 
 ### Skills Demonstrated
 
-* Windows account administration
+* Local Windows account administration (`net user`)
 * Password resets
 * Account status investigation
 * Command-line administration
-* User verification
+* Resolution verification using system evidence
 * Ticket documentation
-* Resolution verification
 
-[View Lab →](https://github.com/drexzw/it-support-and-help-desk/tree/main/windows-password-reset-and-account-unlock)
+[View Lab →](https://github.com/drexzw/it-support-and-help-desk/tree/main/windows-local-password-reset-and-account-enable-disable)
 
-> **Future expansion:** Active Directory-based password reset and account lockout troubleshooting is covered in the Active Directory lab below.
+> **Note:** Account lockout troubleshooting is covered in the Active Directory lab below.
 
 ---
 
@@ -474,7 +473,7 @@ The immediate focus of this repository is **IT Support and Help Desk**, with clo
 * [x] DNS Troubleshooting
 * [x] NTFS Permissions
 * [x] Shared Folder Access Denied
-* [x] Windows Password Reset & Account Unlock
+* [x] Windows Local Password Reset & Account Enable/Disable
 * [x] Active Directory & Help Desk Administration
 
 ### In Progress / Planned
