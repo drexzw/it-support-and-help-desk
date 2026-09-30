@@ -1,51 +1,50 @@
 # Commands Used
 
-This document contains the Windows commands used during the Password Reset & Account Unlock project.
+Every command below appears in a screenshot in this lab. Passwords are replaced with placeholders. Run all commands from **Command Prompt as Administrator**.
 
 ---
 
-## Create a Local User
-
-```cmd
-net user jsmith Password123! /add
-```
-
-Creates a new local user account named **jsmith** with the specified password.
-
----
-
-## Display All Local Users
+## List Local User Accounts
 
 ```cmd
 net user
 ```
 
 Lists every local user account on the computer.
+**Screenshots:** [01](screenshots/01-existing-users.png), [02](screenshots/02-user-created.png), [08](screenshots/08-user-deleted.png)
 
 ---
 
-## View User Details
+## Create a Local User
+
+```cmd
+net user jsmith <InitialPassword> /add
+```
+
+Creates the local account `jsmith`.
+**Screenshot:** [02](screenshots/02-user-created.png)
+
+---
+
+## View Account Details
 
 ```cmd
 net user jsmith
 ```
 
-Displays information about the user account, including:
-
-* Account status
-* Password last set
-* Local group memberships
-* Login permissions
+Shows account status (Account active), Password last set, Password expires, Last logon, and group memberships.
+**Screenshots:** [03](screenshots/03-user-information.png), [05](screenshots/05-password-last-set.png), [06](screenshots/06-account-disabled.png), [07](screenshots/07-account-enabled.png)
 
 ---
 
-## Reset a User Password
+## Reset a Password
 
 ```cmd
-net user jsmith Welcome2026!
+net user jsmith <NewTemporaryPassword>
 ```
 
-Changes the user's password to a temporary password.
+Sets a new password for the account. Confirm it worked by checking that **Password last set** changed.
+**Screenshot:** [04](screenshots/04-password-reset.png)
 
 ---
 
@@ -55,7 +54,8 @@ Changes the user's password to a temporary password.
 net user jsmith /active:no
 ```
 
-Disables the user account, preventing sign-in.
+Disables the account so it cannot sign in. `net user jsmith` then shows Account active = No.
+**Screenshot:** [06](screenshots/06-account-disabled.png)
 
 ---
 
@@ -65,20 +65,22 @@ Disables the user account, preventing sign-in.
 net user jsmith /active:yes
 ```
 
-Re-enables the user account.
+Re-enables the account. `net user jsmith` then shows Account active = Yes.
+**Screenshot:** [07](screenshots/07-account-enabled.png)
 
 ---
 
-## Delete a Test User
+## Delete the Test Account
 
 ```cmd
 net user jsmith /delete
 ```
 
-Deletes the local user account from the computer.
+Removes the local account. Used for cleanup after the lab.
+**Screenshot:** [08](screenshots/08-user-deleted.png)
 
 ---
 
-## Key Takeaways
+## Note on Typing Passwords
 
-The `net user` command is one of the most commonly used Windows command-line tools for managing local user accounts. Understanding these commands is a valuable skill for entry-level Help Desk technicians, particularly when troubleshooting login and account-related issues.
+In this lab the passwords were typed directly into the command, so they appear on screen and in the console history. This was acceptable for a throwaway test account. For real accounts, running `net user <name> *` prompts for the password without displaying it. That method was not used or pictured in this lab.
