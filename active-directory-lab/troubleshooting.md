@@ -390,7 +390,7 @@ The final step should always be to reproduce the original failure condition and 
 Account-lockout incident:
 
 ```text
-tickets/account-lockout-sjohnson.md
+tickets/account-lockout-sarah-johnson.md
 ```
 
 Command reference:
