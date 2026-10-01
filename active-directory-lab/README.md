@@ -208,7 +208,7 @@ The scenario was used to practice:
 The complete ticket is documented in:
 
 ```text
-tickets/account-lockout-sjohnson.md
+tickets/account-lockout-sarah-johnson.md
 ```
 
 Supporting evidence is stored in:
