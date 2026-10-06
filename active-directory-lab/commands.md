@@ -300,7 +300,171 @@ Useful for confirming how many failed authentication attempts are required befor
 
 ---
 
-# 7. General Troubleshooting Workflow
+# 7. Department Folders and NTFS Permissions
+
+Commands used to create department folders and apply group-based NTFS permissions on the Domain Controller. Evidence for each step is in `screenshots/07-department-permissions/`.
+
+> **Note:** These are local NTFS permissions on the Domain Controller. The folders were not shared over SMB, and access was not tested from the client in this stage.
+
+## Create the Department Folders
+
+```powershell
+New-Item -Path "C:\CompanyData\IT" -ItemType Directory
+New-Item -Path "C:\CompanyData\HR" -ItemType Directory
+New-Item -Path "C:\CompanyData\Finance" -ItemType Directory
+New-Item -Path "C:\CompanyData\Sales" -ItemType Directory
+New-Item -Path "C:\CompanyData\Management" -ItemType Directory
+```
+
+Creates one folder per department under `C:\CompanyData`.
+
+**Evidence:** `screenshots/07-department-permissions/01-companydata-folders-created.png`
+
+---
+
+## List the Department Security Groups and Folders
+
+```powershell
+Get-ADGroup -Filter 'Name -like "*GG*"' | Select-Object Name
+Get-ChildItem "C:\CompanyData" -Directory | Select-Object Name
+```
+
+Filtering on `GG` returns only the lab's six security groups instead of the 50+ built-in groups. The second command lists the department folders.
+
+**Evidence:** `screenshots/07-department-permissions/02-security-groups-and-folders-verified.png`
+
+---
+
+## Capture the Baseline ACL
+
+```powershell
+Get-Acl "C:\CompanyData" | Format-List
+Get-Acl "C:\CompanyData\IT" | Format-List
+```
+
+Shows the owner and access entries before any group permissions are applied. Run this before changing permissions so there is a record of the starting state.
+
+**Evidence:** `screenshots/07-department-permissions/03-baseline-acl-before-group-permissions.png`
+
+---
+
+## Grant Department Permissions
+
+```powershell
+icacls "C:\CompanyData\IT" /grant "DREXZW\GG-IT-Users:(OI)(CI)M"
+icacls "C:\CompanyData\IT" /grant "DREXZW\GG-IT-Admins:(OI)(CI)F"
+icacls "C:\CompanyData\HR" /grant "DREXZW\GG-HR-Users:(OI)(CI)M"
+icacls "C:\CompanyData\Finance" /grant "DREXZW\GG-Finance-Users:(OI)(CI)M"
+icacls "C:\CompanyData\Sales" /grant "DREXZW\GG-Sales-Users:(OI)(CI)M"
+icacls "C:\CompanyData\Management" /grant "DREXZW\GG-Management-Users:(OI)(CI)M"
+```
+
+Grants each department group Modify on its own folder, and `GG-IT-Admins` Full Control on the IT folder. `(OI)(CI)` makes the permission apply to files and subfolders.
+
+> **Important:** Use the NetBIOS domain name (`DREXZW\`) in the principal, not `CORP\`. The first attempt used `CORP\GG-IT-Users` and failed (**not pictured**). See `troubleshooting.md`.
+
+**Evidence:** `screenshots/07-department-permissions/04-icacls-department-grants.png`
+
+---
+
+## Verify Group Membership
+
+```powershell
+Get-ADGroupMember "GG-IT-Users" | Select-Object Name, SamAccountName
+Get-ADGroupMember "GG-IT-Admins" | Select-Object Name, SamAccountName
+Get-ADGroupMember "GG-HR-Users" | Select-Object Name, SamAccountName
+Get-ADGroupMember "GG-Finance-Users" | Select-Object Name, SamAccountName
+Get-ADGroupMember "GG-Sales-Users" | Select-Object Name, SamAccountName
+Get-ADGroupMember "GG-Management-Users" | Select-Object Name, SamAccountName
+```
+
+Confirms which user is in each group. Each group contained one user in this lab.
+
+**Evidence:** `screenshots/07-department-permissions/05-group-membership-verification.png`
+
+---
+
+## Review the Resulting ACLs
+
+```powershell
+icacls "C:\CompanyData\IT"
+icacls "C:\CompanyData\HR"
+icacls "C:\CompanyData\Finance"
+icacls "C:\CompanyData\Sales"
+icacls "C:\CompanyData\Management"
+```
+
+Displays the full ACL for each folder. After the grants, the output still showed inherited `BUILTIN\Users` entries (marked `(I)`) alongside the new group entries.
+
+**Evidence:** `screenshots/07-department-permissions/06-icacls-before-inheritance-cleanup.png`
+
+---
+
+## Disable Inheritance and Remove BUILTIN\Users
+
+Run for each of the five department folders. Disable inheritance first, then remove the entry.
+
+```powershell
+icacls "C:\CompanyData\IT" /inheritance:d
+icacls "C:\CompanyData\HR" /inheritance:d
+icacls "C:\CompanyData\Finance" /inheritance:d
+icacls "C:\CompanyData\Sales" /inheritance:d
+icacls "C:\CompanyData\Management" /inheritance:d
+
+icacls "C:\CompanyData\IT" /remove "BUILTIN\Users"
+icacls "C:\CompanyData\HR" /remove "BUILTIN\Users"
+icacls "C:\CompanyData\Finance" /remove "BUILTIN\Users"
+icacls "C:\CompanyData\Sales" /remove "BUILTIN\Users"
+icacls "C:\CompanyData\Management" /remove "BUILTIN\Users"
+```
+
+`/inheritance:d` stops the folder from inheriting from `C:\CompanyData` and converts the existing inherited entries into explicit ones, so nothing is lost. `/remove` then deletes every `BUILTIN\Users` entry from the folder's ACL. Inherited entries cannot be removed while the folder is still inheriting, so the order matters.
+
+Only the five department folders were changed. The parent `C:\CompanyData` was left as it was.
+
+**Evidence:** `screenshots/07-department-permissions/07-inheritance-disabled-builtin-users-removed.png`
+
+---
+
+## Verify the Final ACLs
+
+```powershell
+icacls "C:\CompanyData\IT"
+icacls "C:\CompanyData\HR"
+icacls "C:\CompanyData\Finance"
+icacls "C:\CompanyData\Sales"
+icacls "C:\CompanyData\Management"
+```
+
+Expected result for each folder:
+
+* No `BUILTIN\Users` entry
+* No `(I)` (inherited) markers
+* The department group with `(OI)(CI)(M)`; `GG-IT-Admins` with `(OI)(CI)(F)` on the IT folder
+* `NT AUTHORITY\SYSTEM` and `BUILTIN\Administrators` with `(OI)(CI)(F)`
+* `CREATOR OWNER` with `(OI)(CI)(IO)(F)`
+
+**Evidence:** `screenshots/07-department-permissions/08-icacls-after-inheritance-cleanup.png`
+
+---
+
+## Reading icacls Output
+
+| Code | Meaning |
+| --- | --- |
+| `F` | Full control |
+| `M` | Modify |
+| `RX` | Read and execute |
+| `AD` | Add subdirectory (append data) |
+| `WD` | Add file (write data) |
+| `OI` | Object inherit: applies to files in the folder |
+| `CI` | Container inherit: applies to subfolders |
+| `IO` | Inherit only: applies to child items, not the folder itself |
+| `I` | Permission is inherited from a parent folder |
+
+---
+
+# 8. General Troubleshooting Workflow
 
 A useful troubleshooting sequence for this lab is:
 
