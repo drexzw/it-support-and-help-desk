@@ -277,7 +277,84 @@ In this lab, the lockout was intentionally reproduced using repeated `runas` att
 
 ---
 
-# 7. Troubleshooting Method Used
+# 7. Permission Command Failed: Wrong Domain Prefix
+
+## Symptoms
+
+While granting NTFS permissions on the department folders, the first `icacls` commands failed. The principal had been written as:
+
+```text
+CORP\GG-IT-Users
+```
+
+The failed attempt was not captured in a screenshot (**not pictured**).
+
+## Investigation
+
+The domain is named `corp.drexzw.local`, so `CORP` looked like the domain name. But the `DOMAIN\name` format uses the domain's **NetBIOS name**, which in this lab is `DREXZW`, not the first label of the DNS name.
+
+## Resolution
+
+The commands were re-run with the correct prefix:
+
+```powershell
+icacls "C:\CompanyData\IT" /grant "DREXZW\GG-IT-Users:(OI)(CI)M"
+```
+
+The successful commands are captured in `screenshots/07-department-permissions/04-icacls-department-grants.png`.
+
+## Lesson
+
+In `DOMAIN\principal` format, use the NetBIOS name. The DNS name and the NetBIOS name of a domain can differ, and guessing from the DNS name produces errors that look like the group does not exist.
+
+---
+
+# 8. Inherited Permissions Undermined Department Folder Separation
+
+## Symptoms
+
+No user reported a problem. The issue was found while verifying the permissions after the group grants succeeded.
+
+## Investigation
+
+The baseline ACL (`03-baseline-acl-before-group-permissions.png`) showed default entries on `C:\CompanyData` and the IT folder, including `BUILTIN\Users`.
+
+After the department groups were granted access, `icacls` was run against each folder (`06-icacls-before-inheritance-cleanup.png`). Every department folder showed both the new group entry and inherited `BUILTIN\Users` entries:
+
+```text
+BUILTIN\Users:(I)(OI)(CI)(RX)
+BUILTIN\Users:(I)(CI)(AD)
+BUILTIN\Users:(I)(CI)(WD)
+```
+
+Each `icacls /grant` command had reported success, but a successful grant only means the entry was added. It does not show what else is in the ACL. On a Domain Controller, `BUILTIN\Users` is expected to include ordinary domain users, so those inherited entries would likely have let users outside a department read into that department's folder.
+
+This conclusion comes from reading the ACLs. It was not reproduced from a client session.
+
+## Resolution
+
+Inheritance was disabled on each department folder, then `BUILTIN\Users` was removed:
+
+```powershell
+icacls "C:\CompanyData\IT" /inheritance:d
+icacls "C:\CompanyData\IT" /remove "BUILTIN\Users"
+```
+
+(Repeated for HR, Finance, Sales, and Management; evidence in `07-inheritance-disabled-builtin-users-removed.png`.)
+
+The order matters. Inherited entries belong to the parent, so they cannot be removed from the child while it is still inheriting. `/inheritance:d` converts the inherited entries into explicit ones, which can then be removed. SYSTEM and Administrators keep Full Control, so no one is locked out.
+
+## Verification
+
+`icacls` was run again on all five folders (`08-icacls-after-inheritance-cleanup.png`). Each now shows only its department group (plus `GG-IT-Admins` on the IT folder), SYSTEM, Administrators, and CREATOR OWNER. No `BUILTIN\Users` entry and no `(I)` markers remain.
+
+## Lesson
+
+Verify the whole ACL, not just that your own change succeeded. Permissions that arrive through inheritance can quietly widen access, and the way to see them is to read the full ACL before and after.
+
+---
+
+# 9. Troubleshooting Method Used
 
 The overall troubleshooting process followed a layered approach.
 
@@ -383,6 +460,14 @@ A successful command does not necessarily mean the user's problem is fixed.
 
 The final step should always be to reproduce the original failure condition and confirm that it has been resolved.
 
+### 7. Use the NetBIOS name in DOMAIN\principal commands
+
+The domain's DNS name (`corp.drexzw.local`) and NetBIOS name (`DREXZW`) are different. Permission commands need the NetBIOS name.
+
+### 8. Read the full ACL, not just the entries you added
+
+A permission grant can succeed while inherited entries still give other users access. Review the complete ACL before and after changes.
+
 ---
 
 # Related Documentation
@@ -405,11 +490,17 @@ Evidence:
 screenshots/
 ```
 
+Department permissions evidence (scenarios 7 and 8):
+
+```text
+screenshots/07-department-permissions/
+```
+
 ---
 
 # Future Troubleshooting Scenarios
 
-The next planned extension of this lab is NTFS and file-share permissions.
+NTFS permissions for the department folders are now configured (scenario 8). The next planned extension is permission-related Help Desk tickets and client-side access testing.
 
 Future scenarios can include:
 
