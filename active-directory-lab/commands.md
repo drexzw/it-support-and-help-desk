@@ -304,7 +304,7 @@ Useful for confirming how many failed authentication attempts are required befor
 
 Commands used to create department folders and apply group-based NTFS permissions on the Domain Controller. Evidence for each step is in `screenshots/07-department-permissions/`.
 
-> **Note:** These are local NTFS permissions on the Domain Controller. The folders were not shared over SMB, and access was not tested from the client in this stage.
+> **Note:** These are NTFS permissions on the Domain Controller, verified with `icacls` and PowerShell on the server. The folders are shared over SMB in section 8.
 
 ## Create the Department Folders
 
@@ -361,7 +361,7 @@ icacls "C:\CompanyData\Management" /grant "DREXZW\GG-Management-Users:(OI)(CI)M"
 
 Grants each department group Modify on its own folder, and `GG-IT-Admins` Full Control on the IT folder. `(OI)(CI)` makes the permission apply to files and subfolders.
 
-> **Important:** Use the NetBIOS domain name (`DREXZW\`) in the principal, not `CORP\`. The first attempt used `CORP\GG-IT-Users` and failed (**not pictured**). See `troubleshooting.md`.
+> **Important:** Use the NetBIOS domain name (`DREXZW\`) in the principal, not `CORP\`. The first attempt used `CORP\GG-IT-Users` and failed (**not pictured**). The NetBIOS name is shown in `screenshots/08-smb-share-access/01-domain-and-user-identity-verified.png`. See `troubleshooting.md`.
 
 **Evidence:** `screenshots/07-department-permissions/04-icacls-department-grants.png`
 
@@ -464,7 +464,134 @@ Expected result for each folder:
 
 ---
 
-# 8. General Troubleshooting Workflow
+# 8. SMB Share and Shared-Folder Access (INC-AD-002)
+
+Commands used to publish `C:\CompanyData` as an SMB share and to troubleshoot a share-versus-NTFS permission problem for `sjohnson`. Evidence for each step is in `screenshots/08-smb-share-access/`.
+
+> **Note:** The server-side commands were run on the Domain Controller. The client-side commands were run in a PowerShell session running as `sjohnson@corp.drexzw.local` on the Windows client. The client reached the share at `\\10.0.1.70\CompanyData`.
+
+## Confirm the Domain and the User
+
+```powershell
+Get-ADDomain
+Get-ADUser sjohnson
+```
+
+`Get-ADDomain` returns the domain details, including `NetBIOSName` (`DREXZW`), the name to use in `DOMAIN\principal` commands. `Get-ADUser` confirms `sjohnson` exists and is in the HR OU.
+
+The `Get-ADDomain` command line itself had scrolled out of view in the screenshot; the domain properties are visible.
+
+**Evidence:** `screenshots/08-smb-share-access/01-domain-and-user-identity-verified.png`
+
+---
+
+## Confirm Group Membership and NTFS Permissions
+
+```powershell
+Get-ADGroup GG-HR-Users
+Get-ADGroupMember GG-HR-Users
+Get-ChildItem "C:\CompanyData"
+icacls C:\CompanyData\HR
+```
+
+Confirms `GG-HR-Users` is a global security group containing `sjohnson`, that the department folders exist, and that the HR folder grants `GG-HR-Users` Modify. Run before testing the share so the NTFS layer is known to be correct.
+
+**Evidence:** `screenshots/08-smb-share-access/02-hr-group-membership-and-ntfs-verified.png`
+
+---
+
+## Create the SMB Share
+
+```powershell
+New-SmbShare -Name "CompanyData" -Path "C:\CompanyData" -Description "Company Department File Share"
+Get-SmbShare -Name CompanyData
+```
+
+Publishes `C:\CompanyData` as the `CompanyData` share and confirms it exists.
+
+**Evidence:** `screenshots/08-smb-share-access/03-smb-share-created.png`
+
+---
+
+## Review and Set Share Permissions (the Fault)
+
+```powershell
+Get-SmbShareAccess -Name CompanyData
+Grant-SmbShareAccess -Name "CompanyData" -AccountName "DREXZW\GG-HR-Users" -AccessRight Read -Force
+Get-SmbShareAccess -Name CompanyData
+```
+
+The new share started with `Everyone` at Read. `GG-HR-Users` was then deliberately given **Read** at the share level to create the problem for this ticket, while its NTFS permission remained Modify.
+
+**Evidence:** `screenshots/08-smb-share-access/04-smb-share-permissions-hr-read-only.png`
+
+---
+
+## Reproduce the Problem from the Client
+
+Run on the client as `sjohnson`:
+
+```powershell
+whoami
+Test-Path "\\10.0.1.70\CompanyData"
+New-Item "\\10.0.1.70\CompanyData\HR\sjohnson-test.txt" -ItemType File
+```
+
+`whoami` confirms the identity (`drexzw\sjohnson`). `Test-Path` returning `True` shows the share is reachable, so connectivity and authentication are working. `New-Item` returned "Access to the path ... is denied," which narrows the problem to a permission on the write.
+
+**Evidence:** `screenshots/08-smb-share-access/05-sjohnson-access-denied-creating-file.png`
+
+> **Capture note:** this screenshot was taken after the fix and placed here in incident order. See `tickets/shared-folder-access-sarah-johnson.md`.
+
+---
+
+## Fix the Share Permission
+
+```powershell
+Grant-SmbShareAccess -Name "CompanyData" -AccountName "DREXZW\GG-HR-Users" -AccessRight Change -Force
+Get-SmbShare -Name CompanyData
+Get-SmbShareAccess -Name CompanyData
+```
+
+Changes `GG-HR-Users` from Read to Change at the share layer. `Everyone` stays at Read. `Get-SmbShareAccess` confirms the result.
+
+**Evidence:** `screenshots/08-smb-share-access/06-smb-share-permission-changed-to-change.png`
+
+---
+
+## Retest from the Client
+
+Run on the client as `sjohnson`:
+
+```powershell
+whoami
+Test-Path "\\10.0.1.70\CompanyData"
+Get-ChildItem "\\10.0.1.70\CompanyData"
+Get-ChildItem "\\10.0.1.70\CompanyData\HR"
+New-Item "\\10.0.1.70\CompanyData\HR\sjohnson-test.txt" -ItemType File
+Remove-Item "\\10.0.1.70\CompanyData\HR\sjohnson-test.txt"
+```
+
+The test file was created successfully (a 0-byte `sjohnson-test.txt`), confirming the fix. The test file was then removed.
+
+> **Note on the red error in the screenshot:** the first `Remove-Item` attempt included `-ItemType File`. `Remove-Item` does not have that parameter, so PowerShell returned a parameter error. That is a command-syntax mistake and unrelated to permissions. Re-running `Remove-Item` without it returned no error. The deletion was not listed afterwards (**not pictured**).
+
+**Evidence:** `screenshots/08-smb-share-access/07-sjohnson-retest-file-creation-succeeds.png`
+
+---
+
+## Share Permissions Versus NTFS Permissions
+
+| Layer | Where it is set | Checked with |
+| --- | --- | --- |
+| Share permissions | On the share itself (SMB) | `Get-SmbShareAccess` |
+| NTFS permissions | On the folder (file system) | `icacls`, `Get-Acl` |
+
+Over the network, a user gets the **more restrictive** of the two. A user with Modify on NTFS but Read on the share can read but not write. When a user can reach a share but cannot write, check both layers.
+
+---
+
+# 9. General Troubleshooting Workflow
 
 A useful troubleshooting sequence for this lab is:
 
