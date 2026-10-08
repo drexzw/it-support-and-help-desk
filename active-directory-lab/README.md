@@ -4,7 +4,7 @@
 
 This project is a hands-on Active Directory lab built to simulate a small business Windows domain environment and practice common IT Support / Help Desk administration tasks.
 
-The lab uses a Windows Server 2022 instance as the Domain Controller and a Windows client joined to the domain. The environment was used to configure Active Directory, organizational units, users and groups, Group Policy, domain membership, and account lockout behavior.
+The lab uses a Windows Server 2022 instance as the Domain Controller and a Windows client joined to the domain. The environment was used to configure Active Directory, organizational units, users and groups, Group Policy, domain membership, account lockout behavior, department-based NTFS permissions, and SMB file sharing.
 
 The lab also includes troubleshooting scenarios to practice diagnosing issues from both the Domain Controller and client side.
 
@@ -22,6 +22,9 @@ The lab also includes troubleshooting scenarios to practice diagnosing issues fr
 * Join a Windows client to the domain
 * Configure and verify Group Policy
 * Configure password and account lockout policies
+* Create department folders and apply group-based NTFS permissions
+* Review and correct inherited permissions using `icacls`
+* Publish the department folders as an SMB share and troubleshoot a share-versus-NTFS permission conflict
 * Test domain authentication
 * Troubleshoot Active Directory and domain-join issues using both the GUI and PowerShell
 * Simulate a Help Desk account-lockout ticket
@@ -75,7 +78,7 @@ The lab also includes troubleshooting scenarios to practice diagnosing issues fr
  jsmith
 ```
 
-Each department OU (IT, HR, Finance, Sales, Management) has a corresponding `GG-<Dept>-Users` global security group. The Workstations OU holds domain-joined client computers and has the account lockout / password GPO linked to it.
+Each department OU (IT, HR, Finance, Sales, Management) has a corresponding `GG-<Dept>-Users` global security group. The Workstations OU holds domain-joined client computers and has the account lockout / password GPO linked to it. An additional `GG-IT-Admins` group is used for administrative access to the IT department folder (see section 7).
 
 ---
 
@@ -132,7 +135,8 @@ The lab included:
 
 * User: `jsmith` (IT OU)
 * Group: `GG-IT-Users`
-* Additional department groups visible in the same structure: `GG-HR-Users`, `GG-Finance-Users`, `GG-Sales-Users`, `GG-Management`
+* Group: `GG-IT-Admins` (administrative access to the IT folder)
+* Additional department groups visible in the same structure: `GG-HR-Users`, `GG-Finance-Users`, `GG-Sales-Users`, `GG-Management-Users`
 
 Evidence:
 
@@ -219,6 +223,138 @@ screenshots/06-account-lockout-policy/
 
 ---
 
+# 7. Department Permissions (NTFS)
+
+This stage moves the lab from "users belong to groups" to "groups control access to data." Department folders were created under `C:\CompanyData` on the Domain Controller, and each department's security group was granted access to its own folder.
+
+> **Scope:** These are NTFS permissions on folders hosted on the Domain Controller (a lab simplification; a production environment would normally use a dedicated file server). This stage was verified with `icacls` and PowerShell on the Domain Controller. The folders were shared over SMB afterwards, in section 8.
+
+## Folder and Group Layout
+
+| Folder | Group | Permission |
+| --- | --- | --- |
+| `C:\CompanyData\IT` | `DREXZW\GG-IT-Users` | Modify |
+| `C:\CompanyData\IT` | `DREXZW\GG-IT-Admins` | Full Control |
+| `C:\CompanyData\HR` | `DREXZW\GG-HR-Users` | Modify |
+| `C:\CompanyData\Finance` | `DREXZW\GG-Finance-Users` | Modify |
+| `C:\CompanyData\Sales` | `DREXZW\GG-Sales-Users` | Modify |
+| `C:\CompanyData\Management` | `DREXZW\GG-Management-Users` | Modify |
+
+Permissions were granted with `(OI)(CI)` so they apply to files and subfolders created inside each department folder. Permissions are assigned to security groups rather than to individual users, so access changes become group-membership changes.
+
+## Group Membership
+
+Membership of each group was confirmed with `Get-ADGroupMember`:
+
+| Group | Member |
+| --- | --- |
+| `GG-IT-Users` | John Smith (`jsmith`) |
+| `GG-IT-Admins` | John Smith (`jsmith`) |
+| `GG-HR-Users` | Sarah Johnson (`sjohnson`) |
+| `GG-Finance-Users` | Michael Brown (`mbrown`) |
+| `GG-Sales-Users` | David Wilson (`dwilson`) |
+| `GG-Management-Users` | Robert Davis (`rdavis`) |
+
+## Steps Performed
+
+Evidence is in `screenshots/07-department-permissions/`.
+
+1. **Create the department folders** with `New-Item` (`01-companydata-folders-created.png`).
+2. **Confirm the groups and folders**, filtering for `GG` instead of scrolling through the 50+ built-in groups (`02-security-groups-and-folders-verified.png`).
+3. **Capture the baseline ACL** of `C:\CompanyData` and `C:\CompanyData\IT` with `Get-Acl` (`03-baseline-acl-before-group-permissions.png`).
+4. **Grant department permissions** with `icacls`: Modify for each department group, Full Control for `GG-IT-Admins` on the IT folder (`04-icacls-department-grants.png`).
+5. **Verify group membership** with `Get-ADGroupMember` (`05-group-membership-verification.png`).
+6. **Review the resulting ACLs** with `icacls` (`06-icacls-before-inheritance-cleanup.png`).
+7. **Disable inheritance and remove `BUILTIN\Users`** on the five department folders (`07-inheritance-disabled-builtin-users-removed.png`).
+8. **Verify the final ACLs** (`08-icacls-after-inheritance-cleanup.png`).
+
+## Finding: Inherited Access Was Still Present
+
+After the group grants were applied, the ACL output (step 6) showed that every department folder still carried inherited `BUILTIN\Users` entries from `C:\CompanyData`: read and execute, plus rights to add files and subfolders. On a Domain Controller, `BUILTIN\Users` is expected to cover ordinary domain users, so those entries would likely have weakened the separation between departments, even though each group's own grant had succeeded.
+
+This was identified from the ACL output. It was not reproduced from a client session.
+
+The fix was to disable inheritance on each department folder (which converts the inherited entries to explicit ones) and then remove `BUILTIN\Users`. The order matters: inherited entries cannot be removed from a child folder while it is still inheriting.
+
+The final ACLs (step 8) contain only:
+
+* The department group (`GG-<Dept>-Users`, plus `GG-IT-Admins` on the IT folder)
+* `NT AUTHORITY\SYSTEM` (Full Control)
+* `BUILTIN\Administrators` (Full Control)
+* `CREATOR OWNER` (Full Control, inherit-only, applying to items users create)
+
+No entry is marked as inherited `(I)`, and `BUILTIN\Users` no longer appears on any department folder. The IT folder has five entries; the other four folders have four each.
+
+## Not Covered in This Stage
+
+* The first set of `icacls` grant commands failed because the wrong domain prefix was used (`CORP\` instead of `DREXZW\`). The failed attempt was not captured in a screenshot (**not pictured**). The domain's NetBIOS name is shown in `screenshots/08-smb-share-access/01-domain-and-user-identity-verified.png`, and the corrected commands are in `07-department-permissions/04-icacls-department-grants.png`. See `troubleshooting.md`.
+
+---
+
+# 8. SMB File Share and Shared-Folder Access Ticket (INC-AD-002)
+
+This stage publishes the department folders over SMB and uses the share to practice a realistic Help Desk problem: a user whose NTFS permissions are correct but who still cannot write to a shared folder.
+
+> **Scope:** The share is hosted on the Domain Controller (a lab simplification). It was tested from the Windows client as `DREXZW\sjohnson` (HR). Access for the other departments' users was not tested from the client.
+
+## The Share
+
+| Setting | Value |
+| --- | --- |
+| Share name | `CompanyData` |
+| Local path | `C:\CompanyData` |
+| Client path used in testing | `\\10.0.1.70\CompanyData` |
+| Share permissions (after the fix) | `Everyone`: Read; `DREXZW\GG-HR-Users`: Change |
+
+Two permission layers now control access, and the more restrictive of the two wins:
+
+```text
+User -> Share permissions (SMB) -> NTFS permissions -> Result
+```
+
+## The Incident
+
+`INC-AD-002` is a simulated ticket. The fault was introduced deliberately: `sjohnson`'s NTFS permissions on the HR folder were correct (Modify through `GG-HR-Users`), but `GG-HR-Users` had only **Read** at the share level, so she could open the folder but not create files.
+
+The troubleshooting followed this order:
+
+1. Confirm who the user is on the client (`whoami`): `drexzw\sjohnson`.
+2. Confirm the account and domain details (`Get-ADUser`, `NetBIOSName`).
+3. Confirm group membership (`Get-ADGroupMember GG-HR-Users`).
+4. Check NTFS permissions on the HR folder (`icacls`): `GG-HR-Users` has Modify.
+5. Check share permissions (`Get-SmbShareAccess`): `GG-HR-Users` has Read.
+6. Reproduce the failure from the client: creating a file returned "Access to the path ... is denied."
+7. Fix at the share layer: `GG-HR-Users` changed from Read to Change.
+8. Retest from the client: the file was created successfully.
+
+**Root cause:** the share-level permission for `GG-HR-Users` was Read. NTFS allowed Modify, but the effective access over SMB is the more restrictive of the two.
+
+The complete ticket is in:
+
+```text
+tickets/shared-folder-access-sarah-johnson.md
+```
+
+Evidence is in `screenshots/08-smb-share-access/`:
+
+| # | What it shows |
+| --- | --- |
+| 01 | Domain details (NetBIOS name `DREXZW`) and `sjohnson`'s account in the HR OU |
+| 02 | `GG-HR-Users` membership and the HR folder's NTFS ACL |
+| 03 | The `CompanyData` SMB share created |
+| 04 | Share permissions with `GG-HR-Users` set to Read |
+| 05 | `sjohnson` denied when creating a file in HR |
+| 06 | `GG-HR-Users` changed from Read to Change |
+| 07 | `sjohnson` retest: file created successfully |
+
+## Limitations
+
+* Only `GG-HR-Users` was given Change on the share. The other department groups only have the `Everyone` Read entry at the share layer, so their write access over SMB has not been configured or tested.
+* From `sjohnson`'s session, the share root listed all five department folder names (screenshot 07). Nothing in this stage tests whether she can open another department's folder.
+* Screenshot 05 was captured after the fix and placed in incident order, so the failing condition was recreated for the capture. See the ticket's evidence notes.
+
+---
+
 # Troubleshooting Experience
 
 One of the main purposes of this lab was to practice troubleshooting rather than simply following installation steps.
@@ -233,6 +369,9 @@ Issues investigated during the lab included:
 * Account lockout behavior
 * Differences between local and domain credentials
 * Verifying changes from both the client and Domain Controller
+* Wrong domain prefix in permission commands (`CORP\` vs `DREXZW\`)
+* Inherited permissions weakening department folder separation
+* Share-level (SMB) permission blocking a user whose NTFS permissions were correct
 
 Detailed troubleshooting notes are available in:
 
@@ -263,6 +402,15 @@ troubleshooting.md
 * Password policies
 * Account lockout policies
 
+### File System and Share Permissions
+
+* NTFS permissions (Modify, Full Control, inheritance flags)
+* Group-based access control (permissions assigned to security groups, not individual users)
+* Reviewing and correcting inherited permissions
+* Creating SMB shares and managing share-level permissions
+* Diagnosing share-versus-NTFS permission conflicts
+* ACL and share-permission review with `icacls`, `Get-Acl`, and `Get-SmbShareAccess`
+
 ### Help Desk / IT Support
 
 * Ticket-based troubleshooting
@@ -280,7 +428,9 @@ troubleshooting.md
 * `whoami`
 * `systeminfo`
 * `runas`
-* Active Directory PowerShell cmdlets (`Get-ADDomain`, `Get-ADDomainController`, `Get-ADComputer`, `Get-ADOrganizationalUnit`)
+* Active Directory PowerShell cmdlets (`Get-ADDomain`, `Get-ADDomainController`, `Get-ADComputer`, `Get-ADOrganizationalUnit`, `Get-ADGroup`, `Get-ADGroupMember`)
+* `icacls`, `Get-Acl`, `New-Item`, `Get-ChildItem`, `Test-Path`
+* `New-SmbShare`, `Get-SmbShare`, `Get-SmbShareAccess`, `Grant-SmbShareAccess`
 
 ---
 
@@ -295,7 +445,9 @@ screenshots/
 ├── 03-users-and-groups/
 ├── 04-client-domain-join/
 ├── 05-group-policy/
-└── 06-account-lockout-policy/
+├── 06-account-lockout-policy/
+├── 07-department-permissions/
+└── 08-smb-share-access/
 ```
 
 This organization makes it possible to follow the lab chronologically instead of presenting a flat collection of screenshots.
@@ -304,16 +456,13 @@ This organization makes it possible to follow the lab chronologically instead of
 
 # Future Improvements
 
-The current lab establishes the core Active Directory environment.
+The lab now covers the core Active Directory environment, department-based NTFS permissions, and an SMB share with a documented access ticket.
 
-Future improvements will include:
+Planned next steps:
 
-* NTFS permissions
-* File-share permissions
-* Department-specific access control
-* Additional user roles
+* Configure share-level permissions for the remaining department groups and test them from the client
+* Test cross-department access from the client (for example, confirming a user is denied another department's folder)
 * More detailed Group Policy configurations
-* Permission troubleshooting scenarios
 * Additional Help Desk tickets
 
 These additions will build on the existing domain rather than replacing the current environment.
@@ -327,3 +476,5 @@ This lab demonstrates the process of building and troubleshooting a basic Window
 The main goal was not only to configure Active Directory, but to develop the troubleshooting workflow required when supporting Windows domain users.
 
 The account-lockout scenario provides a practical Help Desk example where a user-facing authentication problem can be investigated through Group Policy, Active Directory Users and Computers, and client-side testing.
+
+The permissions stages extend the lab from authentication to authorization: they show how group membership maps to folder access, why an ACL should be reviewed in full instead of assuming the grants alone produce the intended result, and how share-level and NTFS permissions combine when a user cannot write to a shared folder.
