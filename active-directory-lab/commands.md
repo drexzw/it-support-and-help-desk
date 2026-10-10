@@ -152,6 +152,8 @@ gpresult /h gpresult.html
 
 Creates an HTML report containing detailed Group Policy information.
 
+See section 9 for using `gpresult` to diagnose a GPO that is not applying.
+
 ---
 
 # 4. Active Directory PowerShell
@@ -591,7 +593,132 @@ Over the network, a user gets the **more restrictive** of the two. A user with M
 
 ---
 
-# 9. General Troubleshooting Workflow
+# 9. Group Policy Not Applying (INC-AD-003)
+
+Commands and checks used to investigate and fix a GPO that was not applying because its link was disabled. Evidence for each step is in `screenshots/09-group-policy-troubleshooting/`.
+
+> **Note:** The client-side commands were run in an elevated PowerShell session as the local `Administrator` on `AD-CLIENT`, so results are computer-scope. The link changes were made in Group Policy Management (GUI).
+
+## Check Which GPOs Are Applied
+
+```powershell
+gpresult /r
+```
+
+Shows the GPOs applied to the computer and the user. On `AD-CLIENT`, the computer section listed Workstation Security Policy and Default Domain Policy.
+
+**Evidence:** `screenshots/09-group-policy-troubleshooting/01-gpresult-initial-applied-policies.png`
+
+---
+
+## Check the GPO Scope and Link (Group Policy Management)
+
+In Group Policy Management:
+
+* Select **Workstation Security Policy** and open the **Scope** tab to see where it is linked and whether the link is enabled.
+* Select the **Workstations** OU and open **Linked Group Policy Objects** to see Link Enabled, Enforced, and GPO Status.
+
+Before the fault: linked to the Workstations OU, `Link Enabled: Yes`, `Enforced: No`, `GPO Status: Enabled`.
+
+**Evidence:**
+* `screenshots/09-group-policy-troubleshooting/02-gpo-scope-link-enabled.png`
+* `screenshots/09-group-policy-troubleshooting/03-workstations-ou-link-enabled.png`
+
+---
+
+## Refresh and Capture the Baseline
+
+```powershell
+gpupdate /force
+gpresult /r /scope computer
+```
+
+`gpupdate /force` refreshes computer and user policy. `gpresult /r /scope computer` shows only the computer-scope results, which is the section that matters for a GPO linked to a computer OU. Run just before introducing the fault, both GPOs were still applied.
+
+**Evidence:** `screenshots/09-group-policy-troubleshooting/04-gpupdate-gpresult-before-fault.png`
+
+---
+
+## Introduce the Fault (Group Policy Management)
+
+The link between Workstation Security Policy and the Workstations OU was disabled. The Linked Group Policy Objects tab then showed `Link Enabled: No`, with `GPO Status` still `Enabled`.
+
+The exact menu steps were not captured (**not pictured**).
+
+**Evidence:** `screenshots/09-group-policy-troubleshooting/05-gpo-link-disabled.png`
+
+> **Capture note:** this screenshot was taken about a minute after the failing `gpresult` (06), while the link was still disabled.
+
+---
+
+## Diagnose from the Client
+
+```powershell
+gpupdate /force
+gpresult /r /scope computer
+```
+
+Result: only Default Domain Policy was listed under Applied Group Policy Objects. Workstation Security Policy moved to the filtered-out list:
+
+```text
+The following GPOs were not applied because they were filtered out
+    Workstation Security Policy
+        Filtering:  Disabled (Link)
+```
+
+The refresh itself completed successfully, so the policy was not failing to download. The `Disabled (Link)` reason points at the link.
+
+**Evidence:** `screenshots/09-group-policy-troubleshooting/06-gpresult-gpo-filtered-disabled-link.png`
+
+---
+
+## Restore the Link (Group Policy Management)
+
+The link was re-enabled; the Linked Group Policy Objects tab again showed `Link Enabled: Yes`.
+
+**Evidence:** `screenshots/09-group-policy-troubleshooting/07-gpo-link-restored.png`
+
+---
+
+## Verify the Fix
+
+```powershell
+gpupdate /force
+gpresult /r /scope computer
+```
+
+Workstation Security Policy and Default Domain Policy were both listed under Applied Group Policy Objects again.
+
+**Evidence:** `screenshots/09-group-policy-troubleshooting/08-gpresult-gpo-applied-after-restore.png`
+
+---
+
+## Reading gpresult's "Filtered Out" Reasons
+
+| Filtering value | Meaning |
+| --- | --- |
+| `Disabled (Link)` | The GPO's link to the OU is disabled (seen in this lab) |
+| `Not Applied (Empty)` | The GPO has no settings to apply; shown here for Local Group Policy |
+| `Denied (Security)` | Security filtering or permissions exclude the computer or user (not seen in this lab) |
+| `Denied (WMI Filter)` | A WMI filter did not match (not seen in this lab) |
+
+---
+
+## PowerShell Equivalents (Reference Only, Not Run)
+
+These need the Group Policy PowerShell module (available on a Domain Controller or with RSAT). They were **not run** in this ticket and are not shown in any screenshot.
+
+```powershell
+# Show GPO links and inheritance on the Workstations OU
+Get-GPInheritance -Target "OU=Workstations,DC=corp,DC=drexzw,DC=local"
+
+# Re-enable the link
+Set-GPLink -Name "Workstation Security Policy" -Target "OU=Workstations,DC=corp,DC=drexzw,DC=local" -LinkEnabled Yes
+```
+
+---
+
+# 10. General Troubleshooting Workflow
 
 A useful troubleshooting sequence for this lab is:
 
