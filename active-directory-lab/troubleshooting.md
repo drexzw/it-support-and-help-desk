@@ -405,7 +405,69 @@ When a user can reach a share but cannot write, check **both** permission layers
 
 ---
 
-# 10. Troubleshooting Method Used
+# 10. Workstation Security Policy Not Applying: GPO Link Disabled (INC-AD-003)
+
+## Symptoms
+
+The workstation was reported to be missing its expected security policy. This was a controlled lab simulation, not a report from a real end user.
+
+## Investigation
+
+1. **Baseline:** `gpresult /r` on `AD-CLIENT` showed Workstation Security Policy and Default Domain Policy applied.
+2. **GPO scope and link:** Group Policy Management showed the GPO linked to the Workstations OU with `Link Enabled: Yes`, `Enforced: No`, and `GPO Status: Enabled`.
+3. **Fault introduced:** The link to the Workstations OU was disabled (`Link Enabled: No`). `GPO Status` stayed `Enabled`.
+4. **Client check:** `gpupdate /force` completed successfully, and `gpresult /r /scope computer` listed only Default Domain Policy as applied. Workstation Security Policy appeared under "filtered out":
+
+```text
+Workstation Security Policy
+    Filtering:  Disabled (Link)
+```
+
+The refresh worked, so the policy was not failing to download. The filtering reason named the link.
+
+## Root Cause
+
+The link between Workstation Security Policy and the Workstations OU was disabled. The GPO itself still existed, was enabled, and was unchanged, but a GPO with a disabled link does not apply.
+
+## Resolution
+
+The link was re-enabled in Group Policy Management (`Link Enabled: Yes`).
+
+## Verification
+
+`gpupdate /force` was run again on the client, and `gpresult /r /scope computer` listed Workstation Security Policy and Default Domain Policy as applied.
+
+## Evidence
+
+All in `screenshots/09-group-policy-troubleshooting/`: `01` to `04` (initial state and scope), `05` (link disabled), `06` (client shows `Disabled (Link)`), `07` (link restored), `08` (policy applied again). Screenshot `05` was captured about a minute after `06`, while the link was still disabled, and placed in incident order. See `tickets/group-policy-not-applying.md`.
+
+## Limits
+
+Results are computer-scope, from one computer (`AD-CLIENT`), run as the local `Administrator`. The settings inside the GPO were not re-tested; the check was whether the GPO appears in the applied list.
+
+## Lesson
+
+A GPO can exist, be correctly configured, and still not apply because its **link** is disabled. `gpupdate` refreshes policy; `gpresult` shows what actually applied and, for a filtered GPO, why not. Check the GPO's scope and link as well as its settings.
+
+```text
+Expected policy missing
+   ↓
+gpresult: is the GPO applied? (no)
+   ↓
+Filtered-out reason: Disabled (Link)
+   ↓
+Check the link in Group Policy Management
+   ↓
+Re-enable the link
+   ↓
+gpupdate /force, then gpresult again
+   ↓
+GPO applied
+```
+
+---
+
+# 11. Troubleshooting Method Used
 
 The overall troubleshooting process followed a layered approach.
 
@@ -523,6 +585,10 @@ A permission grant can succeed while inherited entries still give other users ac
 
 Over SMB, a user gets the more restrictive of the share permission and the NTFS permission. When someone can open a shared folder but cannot save, compare both layers.
 
+### 10. Check the GPO link, not only its settings
+
+A correctly configured GPO does not apply if its link is disabled. `gpresult` names the reason a GPO was filtered out, which is faster than guessing.
+
 ---
 
 # Related Documentation
@@ -537,6 +603,12 @@ Shared-folder access incident:
 
 ```text
 tickets/shared-folder-access-sarah-johnson.md
+```
+
+Group Policy not applying incident:
+
+```text
+tickets/group-policy-not-applying.md
 ```
 
 Command reference:
@@ -563,11 +635,17 @@ SMB share and access ticket evidence (scenario 9):
 screenshots/08-smb-share-access/
 ```
 
+Group Policy ticket evidence (scenario 10):
+
+```text
+screenshots/09-group-policy-troubleshooting/
+```
+
 ---
 
 # Future Troubleshooting Scenarios
 
-NTFS permissions for the department folders (scenario 8) and an SMB share with a share-versus-NTFS access ticket (scenario 9) are now documented. Further scenarios can build on them.
+NTFS permissions for the department folders (scenario 8) an SMB share with a share-versus-NTFS access ticket (scenario 9), and a disabled GPO link (scenario 10) are now documented. Further scenarios can build on them.
 
 Future scenarios can include:
 
