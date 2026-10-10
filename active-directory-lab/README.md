@@ -4,7 +4,7 @@
 
 This project is a hands-on Active Directory lab built to simulate a small business Windows domain environment and practice common IT Support / Help Desk administration tasks.
 
-The lab uses a Windows Server 2022 instance as the Domain Controller and a Windows client joined to the domain. The environment was used to configure Active Directory, organizational units, users and groups, Group Policy, domain membership, account lockout behavior, department-based NTFS permissions, and SMB file sharing.
+The lab uses a Windows Server 2022 instance as the Domain Controller and a Windows client joined to the domain. The environment was used to configure Active Directory, organizational units, users and groups, Group Policy, domain membership, account lockout behavior, department-based NTFS permissions, SMB file sharing, and Group Policy troubleshooting.
 
 The lab also includes troubleshooting scenarios to practice diagnosing issues from both the Domain Controller and client side.
 
@@ -25,6 +25,7 @@ The lab also includes troubleshooting scenarios to practice diagnosing issues fr
 * Create department folders and apply group-based NTFS permissions
 * Review and correct inherited permissions using `icacls`
 * Publish the department folders as an SMB share and troubleshoot a share-versus-NTFS permission conflict
+* Diagnose a Group Policy application failure caused by a disabled GPO link, using `gpresult` and `gpupdate`
 * Test domain authentication
 * Troubleshoot Active Directory and domain-join issues using both the GUI and PowerShell
 * Simulate a Help Desk account-lockout ticket
@@ -194,6 +195,8 @@ screenshots/05-group-policy/03-gpo-application-verification.png
 
 The client was refreshed and the resulting policy application was verified.
 
+This GPO is also used later in the lab as the subject of a troubleshooting ticket (section 9).
+
 ---
 
 # 6. Account Lockout Help Desk Scenario
@@ -355,6 +358,73 @@ Evidence is in `screenshots/08-smb-share-access/`:
 
 ---
 
+# 9. Group Policy Not Applying Ticket (INC-AD-003)
+
+This stage uses the existing Workstation Security Policy GPO to practice a common Group Policy problem: a GPO that exists and is configured correctly, but is not applying to the computer because its link is disabled.
+
+> **Scope:** This is a controlled lab simulation, not a report from a real end user. The fault was introduced deliberately in Group Policy Management. Checks were run on the domain-joined computer `AD-CLIENT` from an elevated PowerShell session as the local `Administrator`, so the results are **computer-scope** only. Individual policy settings were not re-tested; the check is whether the GPO appears in the computer's applied-policy list.
+
+## Environment
+
+| Item | Value |
+| --- | --- |
+| Domain | `corp.drexzw.local` (NetBIOS: `DREXZW`) |
+| Domain Controller | `AD-DC01` |
+| Client computer | `AD-CLIENT` (in the Workstations OU) |
+| GPO | Workstation Security Policy |
+| Linked to | Workstations OU (not enforced) |
+
+> **Note:** `gpresult` on `AD-CLIENT` reports `OS Configuration: Member Server` and `OS Version: 10.0.20348`.
+
+## What Was Done
+
+1. **Initial state:** `gpresult /r` on the client showed Workstation Security Policy and Default Domain Policy applied.
+2. **Scope and link review:** In Group Policy Management, the GPO's Scope tab and the Workstations OU's Linked Group Policy Objects tab both showed the link enabled.
+3. **Baseline before the fault:** `gpupdate /force` followed by `gpresult /r /scope computer` still showed both GPOs applied.
+4. **Fault:** The link between Workstation Security Policy and the Workstations OU was disabled. The Linked Group Policy Objects tab then showed `Link Enabled: No`, while `GPO Status` stayed `Enabled`.
+5. **Diagnosis:** After `gpupdate /force`, `gpresult /r /scope computer` listed only Default Domain Policy as applied. Workstation Security Policy appeared under the "filtered out" list with `Filtering: Disabled (Link)`.
+6. **Fix:** The link was re-enabled (`Link Enabled: Yes`).
+7. **Verification:** After `gpupdate /force`, `gpresult /r /scope computer` showed Workstation Security Policy applied again, alongside Default Domain Policy.
+
+## Root Cause
+
+The link between Workstation Security Policy and the Workstations OU had been disabled. The GPO itself was still enabled and unchanged, but a disabled link means the GPO does not apply to the OU.
+
+## Key Takeaway
+
+`gpupdate /force` refreshes policy, and `gpresult /r` shows the result of that refresh. They answer different questions. Here the refresh worked correctly; the `gpresult` output is what exposed the cause, because it names the reason a GPO was filtered out (`Disabled (Link)`).
+
+## Evidence
+
+The complete ticket is in:
+
+```text
+tickets/group-policy-not-applying.md
+```
+
+Screenshots are in `screenshots/09-group-policy-troubleshooting/`:
+
+| # | What it shows |
+| --- | --- |
+| 01 | `gpresult /r`: initial applied policies |
+| 02 | GPO Scope tab: link to Workstations enabled |
+| 03 | Workstations OU: link enabled, GPO status Enabled |
+| 04 | `gpupdate /force` and `gpresult`: both GPOs applied just before the fault |
+| 05 | Link disabled (`Link Enabled: No`) |
+| 06 | `gpresult`: Workstation Security Policy filtered out, `Disabled (Link)` |
+| 07 | Link re-enabled (`Link Enabled: Yes`) |
+| 08 | `gpresult`: Workstation Security Policy applied again |
+
+Screenshot 05 was captured about a minute after screenshot 06, while the link was still disabled, and placed here in incident order. See the ticket's evidence notes.
+
+## Not Covered in This Stage
+
+* Only one computer was checked, and only computer-scope results. User-scope results were not part of this ticket.
+* The individual settings inside Workstation Security Policy were not re-tested.
+* The exact menu steps used to disable and re-enable the link were not captured (**not pictured**); the GUI state before and after is.
+
+---
+
 # Troubleshooting Experience
 
 One of the main purposes of this lab was to practice troubleshooting rather than simply following installation steps.
@@ -372,6 +442,7 @@ Issues investigated during the lab included:
 * Wrong domain prefix in permission commands (`CORP\` vs `DREXZW\`)
 * Inherited permissions weakening department folder separation
 * Share-level (SMB) permission blocking a user whose NTFS permissions were correct
+* A correctly configured GPO not applying because its link was disabled
 
 Detailed troubleshooting notes are available in:
 
@@ -401,6 +472,7 @@ troubleshooting.md
 * Group Policy
 * Password policies
 * Account lockout policies
+* Group Policy troubleshooting (GPO links and OU scope, `gpresult`, `gpupdate`)
 
 ### File System and Share Permissions
 
@@ -419,6 +491,7 @@ troubleshooting.md
 * Client-side diagnostics
 * Server-side verification
 * Root-cause analysis
+* Reproducing a fault, correcting the cause, and verifying the result
 * Documentation of troubleshooting steps
 
 ### PowerShell / Command Line
@@ -428,6 +501,7 @@ troubleshooting.md
 * `whoami`
 * `systeminfo`
 * `runas`
+* `gpupdate /force`, `gpresult /r`, `gpresult /r /scope computer`
 * Active Directory PowerShell cmdlets (`Get-ADDomain`, `Get-ADDomainController`, `Get-ADComputer`, `Get-ADOrganizationalUnit`, `Get-ADGroup`, `Get-ADGroupMember`)
 * `icacls`, `Get-Acl`, `New-Item`, `Get-ChildItem`, `Test-Path`
 * `New-SmbShare`, `Get-SmbShare`, `Get-SmbShareAccess`, `Grant-SmbShareAccess`
@@ -447,7 +521,8 @@ screenshots/
 ├── 05-group-policy/
 ├── 06-account-lockout-policy/
 ├── 07-department-permissions/
-└── 08-smb-share-access/
+├── 08-smb-share-access/
+└── 09-group-policy-troubleshooting/
 ```
 
 This organization makes it possible to follow the lab chronologically instead of presenting a flat collection of screenshots.
@@ -456,13 +531,13 @@ This organization makes it possible to follow the lab chronologically instead of
 
 # Future Improvements
 
-The lab now covers the core Active Directory environment, department-based NTFS permissions, and an SMB share with a documented access ticket.
+The lab now covers the core Active Directory environment, department-based NTFS permissions, an SMB share with a documented access ticket, and a documented Group Policy troubleshooting ticket.
 
 Planned next steps:
 
 * Configure share-level permissions for the remaining department groups and test them from the client
 * Test cross-department access from the client (for example, confirming a user is denied another department's folder)
-* More detailed Group Policy configurations
+* More detailed Group Policy configurations (for example, mapping department drives with Group Policy Preferences)
 * Additional Help Desk tickets
 
 These additions will build on the existing domain rather than replacing the current environment.
@@ -478,3 +553,5 @@ The main goal was not only to configure Active Directory, but to develop the tro
 The account-lockout scenario provides a practical Help Desk example where a user-facing authentication problem can be investigated through Group Policy, Active Directory Users and Computers, and client-side testing.
 
 The permissions stages extend the lab from authentication to authorization: they show how group membership maps to folder access, why an ACL should be reviewed in full instead of assuming the grants alone produce the intended result, and how share-level and NTFS permissions combine when a user cannot write to a shared folder.
+
+The Group Policy ticket adds a different kind of problem: a correctly configured GPO that is not applying. It shows the difference between refreshing policy (`gpupdate`) and reading the resulting state (`gpresult`), and that a GPO's link and scope are part of troubleshooting, not only its settings.
