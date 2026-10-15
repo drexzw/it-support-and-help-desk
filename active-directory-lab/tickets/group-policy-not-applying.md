@@ -40,7 +40,7 @@ gpresult /r
 
 The computer settings listed two applied GPOs: **Workstation Security Policy** and **Default Domain Policy**. The computer is in `OU=Workstations,DC=corp,DC=drexzw,DC=local`, and policy was applied from `AD-DC01.corp.drexzw.local`.
 
-Screenshot: `../screenshots/09-group-policy-troubleshooting/01-gpresult-initial-applied-policies.png`
+Screenshot: [`01-gpresult-initial-applied-policies.png`](../screenshots/09-group-policy-troubleshooting/01-gpresult-initial-applied-policies.png)
 
 ---
 
@@ -48,11 +48,11 @@ Screenshot: `../screenshots/09-group-policy-troubleshooting/01-gpresult-initial-
 
 In Group Policy Management, the Workstation Security Policy's **Scope** tab showed one link, to the Workstations OU, with `Enforced: No` and `Link Enabled: Yes`.
 
-Screenshot: `../screenshots/09-group-policy-troubleshooting/02-gpo-scope-link-enabled.png`
+Screenshot: [`02-gpo-scope-link-enabled.png`](../screenshots/09-group-policy-troubleshooting/02-gpo-scope-link-enabled.png)
 
 The Workstations OU's **Linked Group Policy Objects** tab showed the same link with `Link Enabled: Yes` and `GPO Status: Enabled`.
 
-Screenshot: `../screenshots/09-group-policy-troubleshooting/03-workstations-ou-link-enabled.png`
+Screenshot: [`03-workstations-ou-link-enabled.png`](../screenshots/09-group-policy-troubleshooting/03-workstations-ou-link-enabled.png)
 
 ---
 
@@ -67,7 +67,9 @@ gpresult /r /scope computer
 
 Both Workstation Security Policy and Default Domain Policy were still applied.
 
-Screenshot: `../screenshots/09-group-policy-troubleshooting/04-gpupdate-gpresult-before-fault.png`
+![Baseline: after `gpupdate /force`, `gpresult /r /scope computer` lists both Workstation Security Policy and Default Domain Policy as applied.](../screenshots/09-group-policy-troubleshooting/04-gpupdate-gpresult-before-fault.png)
+
+*Baseline: after `gpupdate /force`, `gpresult /r /scope computer` lists both Workstation Security Policy and Default Domain Policy as applied.*
 
 ---
 
@@ -75,7 +77,7 @@ Screenshot: `../screenshots/09-group-policy-troubleshooting/04-gpupdate-gpresult
 
 In Group Policy Management, the link between Workstation Security Policy and the Workstations OU was disabled. The Workstations OU's Linked Group Policy Objects tab then showed `Link Enabled: No`, while `GPO Status` remained `Enabled`.
 
-Screenshot: `../screenshots/09-group-policy-troubleshooting/05-gpo-link-disabled.png`
+Screenshot: [`05-gpo-link-disabled.png`](../screenshots/09-group-policy-troubleshooting/05-gpo-link-disabled.png)
 
 ---
 
@@ -94,7 +96,9 @@ gpresult /r /scope computer
 
 Because the refresh succeeded and the GPO was reported as filtered out because of its link, the cause was the link and not a failure to download policy.
 
-Screenshot: `../screenshots/09-group-policy-troubleshooting/06-gpresult-gpo-filtered-disabled-link.png`
+![With the link disabled: Workstation Security Policy is filtered out with `Disabled (Link)`.](../screenshots/09-group-policy-troubleshooting/06-gpresult-gpo-filtered-disabled-link.png)
+
+*With the link disabled: Workstation Security Policy is filtered out with `Disabled (Link)`.*
 
 ---
 
@@ -112,7 +116,9 @@ The link between **Workstation Security Policy** and the **Workstations OU** had
 
 The link was re-enabled in Group Policy Management. The Workstations OU's Linked Group Policy Objects tab again showed `Link Enabled: Yes`.
 
-Screenshot: `../screenshots/09-group-policy-troubleshooting/07-gpo-link-restored.png`
+![Link re-enabled: `Link Enabled: Yes`.](../screenshots/09-group-policy-troubleshooting/07-gpo-link-restored.png)
+
+*Link re-enabled: `Link Enabled: Yes`.*
 
 ---
 
@@ -127,7 +133,9 @@ gpresult /r /scope computer
 
 Workstation Security Policy and Default Domain Policy were both listed under Applied Group Policy Objects.
 
-Screenshot: `../screenshots/09-group-policy-troubleshooting/08-gpresult-gpo-applied-after-restore.png`
+![After the fix: Workstation Security Policy is applied again.](../screenshots/09-group-policy-troubleshooting/08-gpresult-gpo-applied-after-restore.png)
+
+*After the fix: Workstation Security Policy is applied again.*
 
 The troubleshooting process therefore confirmed:
 
@@ -245,11 +253,11 @@ Supporting screenshots are stored in:
 
 | Step | Screenshot |
 |---|---|
-| Initial applied policies (`gpresult /r`) | `01-gpresult-initial-applied-policies.png` |
-| GPO scope: link enabled | `02-gpo-scope-link-enabled.png` |
-| Workstations OU: link enabled | `03-workstations-ou-link-enabled.png` |
-| Baseline before the fault | `04-gpupdate-gpresult-before-fault.png` |
-| Link disabled | `05-gpo-link-disabled.png` |
-| `gpresult`: filtered out, `Disabled (Link)` | `06-gpresult-gpo-filtered-disabled-link.png` |
-| Link restored | `07-gpo-link-restored.png` |
-| `gpresult`: GPO applied again | `08-gpresult-gpo-applied-after-restore.png` |
+| Initial applied policies (`gpresult /r`) | [`01-gpresult-initial-applied-policies.png`](../screenshots/09-group-policy-troubleshooting/01-gpresult-initial-applied-policies.png) |
+| GPO scope: link enabled | [`02-gpo-scope-link-enabled.png`](../screenshots/09-group-policy-troubleshooting/02-gpo-scope-link-enabled.png) |
+| Workstations OU: link enabled | [`03-workstations-ou-link-enabled.png`](../screenshots/09-group-policy-troubleshooting/03-workstations-ou-link-enabled.png) |
+| Baseline before the fault | [`04-gpupdate-gpresult-before-fault.png`](../screenshots/09-group-policy-troubleshooting/04-gpupdate-gpresult-before-fault.png) |
+| Link disabled | [`05-gpo-link-disabled.png`](../screenshots/09-group-policy-troubleshooting/05-gpo-link-disabled.png) |
+| `gpresult`: filtered out, `Disabled (Link)` | [`06-gpresult-gpo-filtered-disabled-link.png`](../screenshots/09-group-policy-troubleshooting/06-gpresult-gpo-filtered-disabled-link.png) |
+| Link restored | [`07-gpo-link-restored.png`](../screenshots/09-group-policy-troubleshooting/07-gpo-link-restored.png) |
+| `gpresult`: GPO applied again | [`08-gpresult-gpo-applied-after-restore.png`](../screenshots/09-group-policy-troubleshooting/08-gpresult-gpo-applied-after-restore.png) |
