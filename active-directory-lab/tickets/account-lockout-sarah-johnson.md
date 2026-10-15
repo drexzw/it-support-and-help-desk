@@ -41,7 +41,9 @@ Reviewed in the Group Policy Management Editor (Default Domain Policy → Comput
 | Account lockout duration | 5 minutes |
 | Reset account lockout counter after | 1 minute |
 
-Screenshot: `../screenshots/06-account-lockout-policy/02-account-lockout-policy-settings.png`
+![Default Domain Policy, Account Lockout Policy: threshold 5 attempts, duration 5 minutes, reset counter 1 minute.](../screenshots/06-account-lockout-policy/02-account-lockout-policy-settings.png)
+
+*Default Domain Policy, Account Lockout Policy: threshold 5 attempts, duration 5 minutes, reset counter 1 minute.*
 
 ---
 
@@ -51,7 +53,7 @@ Screenshot: `../screenshots/06-account-lockout-policy/02-account-lockout-policy-
 
 Sarah Johnson's account was opened in Active Directory Users and Computers (Properties → Account tab) to confirm the account existed and to capture its state before reproducing the issue.
 
-Screenshot: `../screenshots/06-account-lockout-policy/01-sjohnson-account-before-lockout.png`
+Screenshot: [`01-sjohnson-account-before-lockout.png`](../screenshots/06-account-lockout-policy/01-sjohnson-account-before-lockout.png)
 
 ---
 
@@ -69,7 +71,9 @@ After 5 failed attempts, the account locked, and Windows returned:
 1909: The referenced account is currently locked out and may not be logged on to.
 ```
 
-Screenshot: `../screenshots/06-account-lockout-policy/03-account-lockout-trigger-test.png`
+![Repeated `runas` with a wrong password ends with error 1909: the account is locked out.](../screenshots/06-account-lockout-policy/03-account-lockout-trigger-test.png)
+
+*Repeated `runas` with a wrong password ends with error 1909: the account is locked out.*
 
 ---
 
@@ -81,7 +85,9 @@ Sarah Johnson's account was reopened in Active Directory Users and Computers. Th
 
 with the **Unlock account** checkbox now available.
 
-Screenshot: `../screenshots/06-account-lockout-policy/04-account-lockout-confirmation-aduc.png`
+![ADUC, Account tab: the account is currently locked out, and the Unlock account checkbox is available.](../screenshots/06-account-lockout-policy/04-account-lockout-confirmation-aduc.png)
+
+*ADUC, Account tab: the account is currently locked out, and the Unlock account checkbox is available.*
 
 ---
 
@@ -110,7 +116,7 @@ Potential causes in a production environment could include:
 
 The account was unlocked directly from Active Directory Users and Computers by checking the **Unlock account** checkbox on the Account tab and applying the change.
 
-Screenshot: `../screenshots/06-account-lockout-policy/04-account-lockout-confirmation-aduc.png`
+Screenshot: [`04-account-lockout-confirmation-aduc.png`](../screenshots/06-account-lockout-policy/04-account-lockout-confirmation-aduc.png)
 
 ---
 
@@ -129,7 +135,9 @@ The result confirmed successful domain authentication as the affected user:
 drexzw\sjohnson
 ```
 
-Screenshot: `../screenshots/06-account-lockout-policy/05-account-unlock-success-test.png`
+![After the unlock, `runas` and `whoami` return `drexzw\sjohnson`.](../screenshots/06-account-lockout-policy/05-account-unlock-success-test.png)
+
+*After the unlock, `runas` and `whoami` return `drexzw\sjohnson`.*
 
 The troubleshooting process therefore confirmed:
 
@@ -186,7 +194,7 @@ This run of the exercise was performed entirely through the Active Directory GUI
 
 ## 9. Alternative / Production Approach (Not Pictured in This Run)
 
-In a real environment, or a future run of this lab, the same investigation and remediation could be performed with the Active Directory PowerShell module instead of the GUI:
+In a real environment, the same investigation and remediation could be performed with the Active Directory PowerShell module instead of the GUI:
 
 ```powershell
 # Check lockout status
@@ -216,8 +224,8 @@ Supporting screenshots are stored in:
 
 | Step | Screenshot |
 |---|---|
-| Account state before lockout | `01-sjohnson-account-before-lockout.png` |
-| Account lockout policy configuration | `02-account-lockout-policy-settings.png` |
-| Lockout triggered via repeated `runas` attempts | `03-account-lockout-trigger-test.png` |
-| Lockout confirmed in ADUC | `04-account-lockout-confirmation-aduc.png` |
-| Successful authentication after unlock | `05-account-unlock-success-test.png` |
+| Account state before lockout | [`01-sjohnson-account-before-lockout.png`](../screenshots/06-account-lockout-policy/01-sjohnson-account-before-lockout.png) |
+| Account lockout policy configuration | [`02-account-lockout-policy-settings.png`](../screenshots/06-account-lockout-policy/02-account-lockout-policy-settings.png) |
+| Lockout triggered via repeated `runas` attempts | [`03-account-lockout-trigger-test.png`](../screenshots/06-account-lockout-policy/03-account-lockout-trigger-test.png) |
+| Lockout confirmed in ADUC | [`04-account-lockout-confirmation-aduc.png`](../screenshots/06-account-lockout-policy/04-account-lockout-confirmation-aduc.png) |
+| Successful authentication after unlock | [`05-account-unlock-success-test.png`](../screenshots/06-account-lockout-policy/05-account-unlock-success-test.png) |
