@@ -51,7 +51,7 @@ Get-ADDomain
 Get-ADUser sjohnson
 ```
 
-Screenshot: `../screenshots/08-smb-share-access/01-domain-and-user-identity-verified.png`
+Screenshot: [`01-domain-and-user-identity-verified.png`](../screenshots/08-smb-share-access/01-domain-and-user-identity-verified.png)
 
 ---
 
@@ -70,7 +70,7 @@ C:\CompanyData\HR DREXZW\GG-HR-Users:(OI)(CI)(M)
 
 The NTFS layer was correct.
 
-Screenshot: `../screenshots/08-smb-share-access/02-hr-group-membership-and-ntfs-verified.png`
+Screenshot: [`02-hr-group-membership-and-ntfs-verified.png`](../screenshots/08-smb-share-access/02-hr-group-membership-and-ntfs-verified.png)
 
 ---
 
@@ -82,7 +82,7 @@ The `CompanyData` share was created on the Domain Controller:
 New-SmbShare -Name "CompanyData" -Path "C:\CompanyData" -Description "Company Department File Share"
 ```
 
-Screenshot: `../screenshots/08-smb-share-access/03-smb-share-created.png`
+Screenshot: [`03-smb-share-created.png`](../screenshots/08-smb-share-access/03-smb-share-created.png)
 
 Share permissions were then reviewed. `GG-HR-Users` was set to **Read** at the share level:
 
@@ -95,7 +95,9 @@ Get-SmbShareAccess -Name CompanyData
 | `Everyone` | Read |
 | `DREXZW\GG-HR-Users` | Read |
 
-Screenshot: `../screenshots/08-smb-share-access/04-smb-share-permissions-hr-read-only.png`
+![`Get-SmbShareAccess`: `GG-HR-Users` has Read at the share level.](../screenshots/08-smb-share-access/04-smb-share-permissions-hr-read-only.png)
+
+*`Get-SmbShareAccess`: `GG-HR-Users` has Read at the share level.*
 
 ---
 
@@ -119,7 +121,9 @@ Results:
 New-Item : Access to the path '\\10.0.1.70\CompanyData\HR\sjohnson-test.txt' is denied.
 ```
 
-Screenshot: `../screenshots/08-smb-share-access/05-sjohnson-access-denied-creating-file.png`
+![From the client as `sjohnson`: the share is reachable, but `New-Item` fails with "Access ... is denied". (Captured after the fix; see Evidence Notes.)](../screenshots/08-smb-share-access/05-sjohnson-access-denied-creating-file.png)
+
+*From the client as `sjohnson`: the share is reachable, but `New-Item` fails with "Access ... is denied". (Captured after the fix; see Evidence Notes.)*
 
 ---
 
@@ -146,7 +150,9 @@ The share's permissions after the change:
 | `Everyone` | Read |
 | `DREXZW\GG-HR-Users` | Change |
 
-Screenshot: `../screenshots/08-smb-share-access/06-smb-share-permission-changed-to-change.png`
+![Share permission for `GG-HR-Users` changed from Read to Change.](../screenshots/08-smb-share-access/06-smb-share-permission-changed-to-change.png)
+
+*Share permission for `GG-HR-Users` changed from Read to Change.*
 
 ---
 
@@ -164,7 +170,9 @@ Remove-Item "\\10.0.1.70\CompanyData\HR\sjohnson-test.txt"
 
 The file was created successfully (`sjohnson-test.txt`, 0 bytes), and the test file was then removed.
 
-Screenshot: `../screenshots/08-smb-share-access/07-sjohnson-retest-file-creation-succeeds.png`
+![Retest as `sjohnson`: the file is created in the HR folder. The red error is an unrelated `Remove-Item` syntax mistake (see the note below).](../screenshots/08-smb-share-access/07-sjohnson-retest-file-creation-succeeds.png)
+
+*Retest as `sjohnson`: the file is created in the HR folder. The red error is an unrelated `Remove-Item` syntax mistake (see the note below).*
 
 > **Note on the red error in the screenshot:** the first `Remove-Item` attempt included `-ItemType File`, which is not a `Remove-Item` parameter, so PowerShell returned a parameter error. This was a command-syntax mistake and unrelated to permissions. Running `Remove-Item` without it returned no error. The deletion was not listed afterwards (**not pictured**).
 
@@ -245,10 +253,10 @@ Supporting screenshots are stored in:
 
 | Step | Screenshot |
 |---|---|
-| Domain details and `sjohnson` account | `01-domain-and-user-identity-verified.png` |
-| Group membership and NTFS permissions on HR | `02-hr-group-membership-and-ntfs-verified.png` |
-| SMB share created | `03-smb-share-created.png` |
-| Share permissions with `GG-HR-Users` at Read | `04-smb-share-permissions-hr-read-only.png` |
-| Access denied creating a file | `05-sjohnson-access-denied-creating-file.png` |
-| Share permission changed to Change | `06-smb-share-permission-changed-to-change.png` |
-| Retest: file created successfully | `07-sjohnson-retest-file-creation-succeeds.png` |
+| Domain details and `sjohnson` account | [`01-domain-and-user-identity-verified.png`](../screenshots/08-smb-share-access/01-domain-and-user-identity-verified.png) |
+| Group membership and NTFS permissions on HR | [`02-hr-group-membership-and-ntfs-verified.png`](../screenshots/08-smb-share-access/02-hr-group-membership-and-ntfs-verified.png) |
+| SMB share created | [`03-smb-share-created.png`](../screenshots/08-smb-share-access/03-smb-share-created.png) |
+| Share permissions with `GG-HR-Users` at Read | [`04-smb-share-permissions-hr-read-only.png`](../screenshots/08-smb-share-access/04-smb-share-permissions-hr-read-only.png) |
+| Access denied creating a file | [`05-sjohnson-access-denied-creating-file.png`](../screenshots/08-smb-share-access/05-sjohnson-access-denied-creating-file.png) |
+| Share permission changed to Change | [`06-smb-share-permission-changed-to-change.png`](../screenshots/08-smb-share-access/06-smb-share-permission-changed-to-change.png) |
+| Retest: file created successfully | [`07-sjohnson-retest-file-creation-succeeds.png`](../screenshots/08-smb-share-access/07-sjohnson-retest-file-creation-succeeds.png) |
