@@ -1,528 +1,86 @@
 # IT Support & Help Desk Portfolio
 
-A hands-on IT Support and Help Desk portfolio built around realistic small-business support scenarios.
+Hands-on labs that practice what an entry-level IT Support / Help Desk technician does every day: fix access problems, troubleshoot Windows and Linux systems, and write it all up like a real ticket.
 
-This repository documents my practical experience troubleshooting Windows and Linux systems, supporting users, resolving network and access issues, managing permissions, configuring endpoints, and working with cloud-hosted environments.
-
-The labs are designed around a simulated business environment, **BarberPro Studios LLC**, and are documented using a ticket-based troubleshooting approach similar to what an entry-level IT Support or Help Desk technician may encounter in a real workplace.
+Every lab follows the same flow: **reported issue → investigation → root cause → fix → verification**, with screenshots as evidence.
 
 ---
 
-## 🎯 Portfolio Objective
+## ⭐ Start here: Active Directory & Help Desk Administration
 
-The goal of this repository is to demonstrate practical IT Support skills through hands-on troubleshooting rather than purely theoretical coursework.
+A small-business Windows domain (`corp.drexzw.local`) built from scratch on AWS EC2: a Windows Server 2022 Domain Controller and a domain-joined client. Most of what a Help Desk technician touches is in it: users, groups, file shares, permissions, Group Policy, and four tickets.
 
-Each lab focuses on a specific support scenario and documents:
+**What I did in this lab:**
 
-* The reported issue or business requirement
-* The technical environment
-* Troubleshooting steps
-* Commands and tools used
-* Root-cause identification
-* Resolution
-* Verification
-* Supporting screenshots and evidence
-* Lessons learned
+* Built the domain: Active Directory, DNS, 7 OUs, users, and a security group for each department
+* Joined a Windows client to the domain and verified the join from both the client and the server
+* Created and linked Group Policy for password and account lockout settings, and verified it with `gpresult`
+* Set up department folders and permissions with `icacls`, and found and fixed an inheritance problem during review
+* Worked four Help Desk tickets: reproduced the problem, found the cause, fixed it, and proved the fix
+* Wrote up one problem that is still unsolved, with what was proven, what is only a lead, and what was not captured
 
-The overall objective is to develop the skills required for an **IT Support / Help Desk → Cloud Support → DevOps** career path.
+**Short on time?** Read the [lab README](active-directory-lab/README.md), then [INC-AD-002](active-directory-lab/tickets/shared-folder-access-sarah-johnson.md) (a solved ticket) and [INC-AD-004](active-directory-lab/tickets/gpo-drive-mapping-not-applying.md) (an unsolved one).
 
----
+| Ticket | Problem | Outcome |
+| --- | --- | --- |
+| [INC-AD-001](active-directory-lab/tickets/account-lockout-sarah-johnson.md) | "My account is locked." | Resolved: lockout threshold exceeded, account unlocked and verified |
+| [INC-AD-002](active-directory-lab/tickets/shared-folder-access-sarah-johnson.md) | "I can open the HR folder but can't save." | Resolved: share permission was Read, and the stricter permission wins |
+| [INC-AD-003](active-directory-lab/tickets/group-policy-not-applying.md) | "My workstation is missing its policy." | Resolved: the GPO link was disabled |
+| [INC-AD-004](active-directory-lab/tickets/gpo-drive-mapping-not-applying.md) | "My department drive didn't map." | **Unresolved.** Investigated and documented honestly: what was proven, what is a lead, what was not captured |
 
-## 🖥️ Technical Environment
+All of it is backed by 56 numbered screenshots, grouped by stage.
 
-The labs use a combination of local and cloud-based environments depending on the scenario.
-
-### Operating Systems
-
-* Windows 11
-* Windows Server 2022
-* Linux
-
-### Cloud
-
-* Amazon Web Services (AWS)
-* Amazon EC2
-* Amazon EBS
-* Amazon CloudWatch
-* AWS networking and security services
-
-### Networking
-
-* IPv4
-* DHCP
-* DNS
-* Default gateways
-* IP troubleshooting
-* Connectivity testing
-* `ping`
-* `ipconfig`
-* `nslookup`
-
-### Windows Administration
-
-* Local user administration
-* Active Directory
-* NTFS permissions
-* Shared folders
-* Password resets
-* Account management
-* Remote Desktop
-* PowerShell
-
-### Linux Administration
-
-* User and group management
-* File ownership
-* File permissions
-* SSH
-* UFW
-* Fail2ban
-* systemd
-* Linux command line
-
-### Documentation & Support
-
-* Support tickets
-* Troubleshooting documentation
-* Commands reference
-* Deployment notes
-* Screenshots and technical evidence
-* Root-cause analysis
-* Verification testing
+**[Open the Active Directory lab →](active-directory-lab/)**
 
 ---
 
-# 📂 IT Support Labs
+## More labs
 
-## 01 — Linux User Management & File Permissions
-
-**Scenario:**
-A new employee needs access to department resources while unauthorized users must be prevented from accessing them.
-
-### Skills Demonstrated
-
-* Linux user creation
-* Group management
-* File ownership
-* Linux permissions
-* Department resource access
-* Least-privilege principles
-* Access verification
-
-[View Lab →](https://github.com/drexzw/it-support-and-help-desk/tree/main/linux-user-management-and-file-permissions)
+| Lab | Scenario | Skills |
+| --- | --- | --- |
+| [Shared Folder Access Denied](shared-folder-access-denied/) | A user cannot reach a shared business resource | User and group investigation, shared folder troubleshooting |
+| [NTFS Permissions](ntfs-permissions-lab/) | Users need different access based on their role | NTFS permissions, inheritance, Windows Server, Remote Desktop |
+| [Windows Local Password Reset & Account Enable/Disable](windows-local-password-reset-and-account-enable-disable/) | A user cannot sign in after forgetting their password | `net user`, password reset, verification with "Password last set" |
+| [DNS Troubleshooting](dns-troubleshooting-lab/) | A server is online but cannot resolve names | Telling a connectivity problem from a DNS problem, `nslookup`, `ping` |
+| [DHCP / IP Configuration](dhcp-ip-configuration-and-troubleshooting-lab/) | A workstation has no working network configuration | Layered troubleshooting, `ipconfig`, DHCP release/renew, gateway and DNS checks |
+| [Linux User Management & File Permissions](linux-user-management-and-file-permissions/) | A new employee needs department access, and others must not have it | Users, groups, ownership, permissions, least privilege |
+| [Linux Onboarding & Endpoint Hardening](onboarding-endpoint-security-hardening/) | Prepare a Linux endpoint for a new hire with baseline security | SSH keys, UFW, Fail2ban, systemd; includes real fixes for an SSH socket issue and a Fail2ban conflict |
 
 ---
 
-## 02 — New Employee Onboarding & Endpoint Security Hardening
+## How the work is documented
 
-**Scenario:**
-Prepare a Linux endpoint for a new employee while applying baseline security controls.
-
-### Skills Demonstrated
-
-* User onboarding
-* Group configuration
-* Password policies
-* SSH configuration
-* SSH key authentication
-* UFW firewall
-* Fail2ban
-* systemd troubleshooting
-* Security verification
-* Endpoint hardening
-
-### Troubleshooting Highlights
-
-This lab includes real troubleshooting scenarios encountered during implementation, including SSH socket configuration and Fail2ban configuration issues.
-
-[View Lab →](https://github.com/drexzw/it-support-and-help-desk/tree/main/onboarding-endpoint-security-hardening)
+* **Ticket style:** each write-up gives the symptom, the checks, the root cause, the fix and the proof, the way a Help Desk ticket is written.
+* **Evidence first:** the documentation is matched to the screenshots. Where something was not captured or not solved, it says so instead of claiming it (see INC-AD-004).
+* **Commands explained:** each lab lists the commands used and what each one is for, so the steps can be repeated.
+* **Troubleshooting method:** identify the problem, gather information, isolate it, find the root cause, fix it, verify the fix, and document it.
 
 ---
 
-## 03 — DHCP / IP Configuration & Troubleshooting
+## Skills at a glance
 
-**Scenario:**
-A workstation is experiencing network connectivity problems caused by incorrect or missing IP configuration.
-
-### Skills Demonstrated
-
-* IPv4 troubleshooting
-* DHCP
-* `ipconfig`
-* DHCP release/renew
-* Default gateway verification
-* DNS configuration
-* Connectivity testing
-* Layered troubleshooting
-
-### Troubleshooting Method
-
-The investigation follows a structured approach:
-
-1. Inspect current configuration
-2. Test local connectivity
-3. Test the default gateway
-4. Test external connectivity
-5. Test DNS resolution
-6. Renew DHCP configuration
-7. Verify restored configuration
-8. Perform final connectivity testing
-
-[View Lab →](https://github.com/drexzw/it-support-and-help-desk/tree/main/dhcp-ip-configuration-and-troubleshooting-lab)
+| Area | What the labs cover |
+| --- | --- |
+| Windows & Active Directory | Domain setup, OUs, users and groups, Group Policy, NTFS and share permissions, account lockout, PowerShell, Remote Desktop |
+| Linux | Users and groups, file permissions, SSH, UFW, Fail2ban, systemd |
+| Networking | IPv4, DHCP, DNS, gateways, connectivity testing |
+| Cloud | Windows and Linux lab environments hosted on AWS EC2 |
+| Support practice | Ticket-based troubleshooting, root-cause analysis, verification, clear documentation |
 
 ---
 
-## 04 — DNS Troubleshooting
+## Status
 
-**Scenario:**
-A Windows Server can communicate over the network but cannot resolve external hostnames.
+All eight labs are complete as documented. The Active Directory lab is ongoing and grows through separate, documented stages and tickets; department drive mapping is recorded as it stands: investigated, not yet fixed.
 
-### Skills Demonstrated
-
-* DNS troubleshooting
-* `nslookup`
-* `ping`
-* IP vs hostname troubleshooting
-* DNS configuration
-* Layered network troubleshooting
-* Root-cause analysis
-
-### Key Concept Demonstrated
-
-The lab demonstrates how to distinguish between:
-
-> **Network connectivity problems** and **DNS resolution problems**
-
-The environment intentionally introduces an incorrect DNS configuration and then uses testing to identify and resolve the failure.
-
-[View Lab →](https://github.com/drexzw/it-support-and-help-desk/tree/main/dns-troubleshooting-lab)
+The direction is **IT Support / Help Desk → Cloud Support → DevOps**, built on practical, documented work.
 
 ---
 
-## 05 — NTFS Permissions
+## About
 
-**Scenario:**
-Users require different levels of access to files and folders based on their responsibilities.
-
-### Skills Demonstrated
-
-* Windows user management
-* NTFS permissions
-* Permission inheritance
-* Access control
-* Permission verification
-* Windows Server
-* Remote Desktop
-* Cloud-hosted Windows environments
-
-[View Lab →](https://github.com/drexzw/it-support-and-help-desk/tree/main/ntfs-permissions-lab)
-
----
-
-## 06 — Shared Folder Access Denied
-
-**Scenario:**
-A user reports that they cannot access a shared business resource that they are expected to use.
-
-### Skills Demonstrated
-
-* Access troubleshooting
-* Windows permissions
-* User/group investigation
-* Shared folder troubleshooting
-* Access verification
-* Help Desk ticket resolution
-
-[View Lab →](https://github.com/drexzw/it-support-and-help-desk/tree/main/shared-folder-access-denied)
-
----
-
-## 07 — Windows Local Password Reset & Account Enable/Disable
-
-**Scenario:**
-A user reports being unable to sign in after forgetting their Windows password. On a local Windows 11 machine, I checked the account status, reset the password, confirmed the reset using the Password last set timestamp, and practiced disabling and re-enabling the account.
-
-### Skills Demonstrated
-
-* Local Windows account administration (`net user`)
-* Password resets
-* Account status investigation
-* Command-line administration
-* Resolution verification using system evidence
-* Ticket documentation
-
-[View Lab →](https://github.com/drexzw/it-support-and-help-desk/tree/main/windows-local-password-reset-and-account-enable-disable)
-
-> **Note:** Account lockout troubleshooting is covered in the Active Directory lab below.
-
----
-
-## 08 — Active Directory & Help Desk Administration
-
-**Scenario:**
-Simulate a small-business Windows domain environment (**BarberPro Studios LLC**) and practice the Active Directory administration and troubleshooting tasks a Help Desk technician would encounter day to day.
-
-### Environment
-
-* Domain: `corp.drexzw.local` (NetBIOS: `DREXZW`)
-* Windows Server 2022 Domain Controller + domain-joined Windows client
-* Hosted on AWS EC2
-
-### Skills Demonstrated
-
-* Active Directory Domain Services deployment
-* Organizational Unit design across multiple departments (IT, HR, Finance, Sales, Management, Service Accounts, Workstations)
-* Security groups and user administration
-* Client domain join, verified from both the client and Domain Controller
-* Group Policy creation, linking, and refresh verification
-* Password and account lockout policy configuration
-* Domain authentication testing
-* Active Directory PowerShell (`Get-ADUser`, `Get-ADComputer`, `Get-ADOrganizationalUnit`, `Unlock-ADAccount`, and related cmdlets)
-
-### Troubleshooting Highlights
-
-Includes a full Help Desk-style account-lockout ticket: an account lockout was intentionally reproduced, investigated through Group Policy and Active Directory Users and Computers, resolved, and re-verified — plus five additional documented troubleshooting scenarios covering DNS, domain membership, computer-object visibility, authentication, and Group Policy application.
-
-[View Lab →](https://github.com/drexzw/it-support-and-help-desk/tree/main/active-directory-lab)
-
-> **Planned additions:** NTFS and file-share permissions, department-specific access control, additional Group Policy configurations, and further Help Desk tickets will extend this environment.
-
----
-
-# 🛠️ Troubleshooting Philosophy
-
-The labs follow a structured troubleshooting methodology rather than relying on trial-and-error fixes.
-
-### 1. Identify
-
-Understand the user's reported problem and reproduce the issue where possible.
-
-### 2. Gather Information
-
-Collect configuration details, error messages, logs, command output, and other relevant evidence.
-
-### 3. Isolate
-
-Determine which layer or component is responsible for the problem.
-
-### 4. Identify Root Cause
-
-Use the available evidence to determine why the problem occurred.
-
-### 5. Resolve
-
-Apply the appropriate fix while minimizing unnecessary changes.
-
-### 6. Verify
-
-Confirm that the original problem has been resolved.
-
-### 7. Document
-
-Record the symptoms, investigation, root cause, resolution, and verification results.
-
-This approach is intended to reflect how troubleshooting should be performed in a real IT Support environment.
-
----
-
-# 📋 Documentation Structure
-
-Where applicable, individual labs use a consistent documentation structure:
-
-```text
-lab/
-├── README.md
-├── commands.md
-├── support-ticket.md
-├── deployment-notes.md
-└── screenshots/
-```
-
-### README.md
-
-Explains the scenario, environment, objectives, implementation, troubleshooting, and results.
-
-### commands.md
-
-Contains the important commands used during the lab and explains their purpose.
-
-### support-ticket.md
-
-Documents the scenario from a Help Desk perspective, including:
-
-* User issue
-* Symptoms
-* Investigation
-* Root cause
-* Resolution
-* Verification
-* Ticket closure
-
-### deployment-notes.md
-
-Documents infrastructure and environment configuration where applicable.
-
-### screenshots/
-
-Contains chronological technical evidence supporting the troubleshooting process.
-
----
-
-# 🎓 Skills Demonstrated
-
-Through these projects, I am developing practical experience in:
-
-### IT Support
-
-* Ticket-based troubleshooting
-* User support
-* Account administration
-* Password resets
-* Access troubleshooting
-* Endpoint troubleshooting
-* Documentation
-* Root-cause analysis
-
-### Windows
-
-* Windows 11
-* Windows Server
-* PowerShell
-* NTFS permissions
-* Shared folders
-* User administration
-* Remote Desktop
-* Active Directory
-
-### Linux
-
-* User and group management
-* Permissions
-* SSH
-* Firewall configuration
-* Fail2ban
-* systemd
-* Command-line administration
-
-### Networking
-
-* IPv4
-* DHCP
-* DNS
-* Gateways
-* Connectivity testing
-* Network troubleshooting
-
-### Cloud
-
-* AWS EC2
-* EBS
-* CloudWatch
-* Cloud-hosted Windows environments
-* Cloud networking fundamentals
-
----
-
-# ☁️ Career Progression
-
-This portfolio is being developed as part of a broader technical progression:
-
-```text
-IT Support / Help Desk
-        │
-        ├── Windows
-        ├── Linux
-        ├── Networking
-        ├── Active Directory
-        └── Troubleshooting
-                │
-                ▼
-          Cloud Support
-                │
-        ├── AWS
-        ├── EC2
-        ├── IAM
-        ├── CloudWatch
-        ├── Networking
-        └── Cloud Troubleshooting
-                │
-                ▼
-             DevOps
-                │
-        ├── Linux
-        ├── Git
-        ├── Python
-        ├── Bash
-        ├── Docker
-        ├── CI/CD
-        ├── Terraform
-        └── AWS Automation
-```
-
-The immediate focus of this repository is **IT Support and Help Desk**, with cloud-based projects gradually being incorporated as the portfolio progresses.
-
----
-
-# 📌 Current Status
-
-### Completed
-
-* [x] Linux User Management & File Permissions
-* [x] New Employee Onboarding & Endpoint Security Hardening
-* [x] DHCP / IP Configuration & Troubleshooting
-* [x] DNS Troubleshooting
-* [x] NTFS Permissions
-* [x] Shared Folder Access Denied
-* [x] Windows Local Password Reset & Account Enable/Disable
-* [x] Active Directory & Help Desk Administration
-
-### In Progress / Planned
-
-* [ ] Extend Active Directory lab with NTFS/file-share permissions and additional tickets
-* [ ] Standardize documentation across existing labs
-* [ ] Improve screenshot organization and naming
-* [ ] Refine support-ticket documentation
-* [ ] Connect related labs into a unified simulated business environment
-* [ ] Expand AWS / Cloud Support projects
-
----
-
-# 📈 Future Development
-
-Once the core IT Support portfolio is complete, future projects will increasingly focus on:
-
-* AWS Cloud Support
-* Identity and Access Management
-* Cloud networking
-* Monitoring and troubleshooting
-* Infrastructure automation
-* Linux administration
-* Git and GitHub
-* Python
-* Bash
-* Docker
-* CI/CD
-* Infrastructure as Code
-* DevOps
-
-The objective is to build progressively from **IT Support → Cloud Support → DevOps** while maintaining practical, documented, hands-on experience.
-
----
-
-## 👤 About
-
-This repository represents my hands-on learning journey into IT Support, Cloud Computing, and eventually DevOps.
-
-Rather than focusing solely on certifications or theoretical coursework, I use these labs to practice diagnosing problems, implementing solutions, documenting technical work, and thinking through issues from the perspective of an IT Support technician.
+I'm building practical IT skills by diagnosing problems, fixing them, and writing up the work clearly, rather than relying on certificates alone.
 
 **GitHub:** [@drexzw](https://github.com/drexzw)
 
----
-
-## ⭐ Repository Philosophy
-
 > **Don't just document what worked. Document how you figured out why it worked.**
-
-The goal of this portfolio is not to demonstrate that every lab was completed without problems.
-
-The goal is to demonstrate the ability to **investigate problems, understand their root causes, implement appropriate solutions, verify the results, and communicate the work clearly.**
