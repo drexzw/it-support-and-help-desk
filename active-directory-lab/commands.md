@@ -152,7 +152,7 @@ gpresult /h gpresult.html
 
 Creates an HTML report containing detailed Group Policy information.
 
-See section 9 for using `gpresult` to diagnose a GPO that is not applying.
+See section 9 for using `gpresult` to diagnose a GPO that is not applying, and section 10 for a user policy refresh that fails.
 
 ---
 
@@ -718,7 +718,111 @@ Set-GPLink -Name "Workstation Security Policy" -Target "OU=Workstations,DC=corp,
 
 ---
 
-# 10. General Troubleshooting Workflow
+# 10. Group Policy Drive Mapping: Unresolved (INC-AD-004)
+
+Commands used while investigating why the Department Drive Maps GPO did not map drives. The problem is **not resolved**; this section records the checks, not a fix. Evidence for each step is in `screenshots/10-gpo-drive-mapping-troubleshooting/`.
+
+> **Note:** the user-side commands were run in PowerShell windows running as `sjohnson` on `AD-CLIENT`. The event-log queries were run as the local `Administrator` on `AD-CLIENT`.
+
+## Confirm the Identity and the Domain Controller
+
+```powershell
+whoami
+ipconfig /all
+nslookup AD-DC01
+```
+
+Confirms which account is in use, that the DNS server is the Domain Controller (`10.0.1.70`), and that `AD-DC01` resolves.
+
+**Evidence:** `screenshots/10-gpo-drive-mapping-troubleshooting/02-client-identity-and-dns-baseline.png`
+
+---
+
+## Check the Share Without Group Policy
+
+```powershell
+Get-PSDrive -PSProvider FileSystem
+Test-Path "\\AD-DC01\CompanyData\HR"
+```
+
+`Get-PSDrive` lists the drives the user can see. `Test-Path` returns `True` when the network path is reachable. This tests file access only; it says nothing about whether Group Policy will map the drive.
+
+**Evidence:** `screenshots/10-gpo-drive-mapping-troubleshooting/03-share-reachable-baseline.png`
+
+---
+
+## Check for User Policy Data
+
+```powershell
+gpresult /r /scope user
+```
+
+`INFO: The user does not have RSoP data.` means Windows has no resultant-policy data for that user on this computer.
+
+**Evidence:** `screenshots/10-gpo-drive-mapping-troubleshooting/04-no-rsop-data-and-no-mapped-drives.png`
+
+---
+
+## Force a User Policy Refresh and Check the Domain Controller
+
+```powershell
+gpupdate /target:user /force
+gpresult /scope:user /r
+Test-Path "\\corp.drexzw.local\NETLOGON"
+nltest /dsgetdc:corp.drexzw.local
+```
+
+* `gpupdate /target:user /force` refreshes only user policy. It failed with `User Policy Update Failed.`
+* `nltest /dsgetdc:` shows which Domain Controller the client finds for the domain. It found `AD-DC01.corp.drexzw.local`.
+* `Test-Path` on the NETLOGON share returned `True`.
+
+The SYSVOL test in the same screenshot used `\\corp.drexzw.local\SYSVOL\corp.drexzw\Policies` and returned `False`. The folder inside SYSVOL is normally named after the full domain name, so the path may simply have been mistyped. A corrected test was not captured (**not pictured**).
+
+**Evidence:** `screenshots/10-gpo-drive-mapping-troubleshooting/05-user-gpupdate-failed-nltest-sysvol-netlogon.png`
+
+---
+
+## Read the Group Policy Event Log
+
+```powershell
+Get-WinEvent -FilterHashtable @{
+    LogName = 'Microsoft-Windows-GroupPolicy/Operational'
+    ID = 7320
+} -MaxEvents 3 |
+Select-Object TimeCreated, ID, Message |
+Format-List
+```
+
+Event 7320 was the error event in this case. Add `$event.ToXml()` (with the query saved in `$event`) to see the raw data, including `ErrorCode`.
+
+| Event ID | Meaning (as seen in this lab) |
+| --- | --- |
+| 7320 | An error. Here: `Group Policy refresh access check failed. Error code 0x5.` and `Access check based on security descriptor failed. Error code 0x5.` |
+| 5321 | Records what started a refresh: `Target=User` or `Target=Machine`, the process, and the account |
+
+Error code `0x5` is Windows' "access denied".
+
+**Evidence:**
+* `screenshots/10-gpo-drive-mapping-troubleshooting/06-event-7320-access-check-0x5.png`
+* `screenshots/10-gpo-drive-mapping-troubleshooting/07-repeated-user-refresh-failures-final-test.png`
+
+---
+
+## Reference Only, Not Run
+
+These were **not run** in this investigation and are not shown in any screenshot.
+
+```powershell
+# Check who has Read and Apply Group Policy on the drive-mapping GPO (Domain Controller or RSAT)
+Get-GPPermission -Name "Department Drive Maps" -All
+
+# Generate a detailed Group Policy report for the user
+gpresult /h GPReport.html
+```
+
+---
+
+# 11. General Troubleshooting Workflow
 
 A useful troubleshooting sequence for this lab is:
 
