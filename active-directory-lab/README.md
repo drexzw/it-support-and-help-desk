@@ -18,17 +18,20 @@ A hands-on Active Directory lab that simulates a small business Windows domain. 
 | Department folder permissions with `icacls`, including an inheritance problem found during review | [Stage 7](#7-department-folder-permissions-ntfs) |
 | Shared folder access: share permissions versus NTFS permissions | [INC-AD-002](tickets/shared-folder-access-sarah-johnson.md) |
 | Group Policy not applying: reading `gpresult` to find a disabled link | [INC-AD-003](tickets/group-policy-not-applying.md) |
-| Writing tickets with a root cause, a fix and a verification step | All three tickets |
+| A drive-mapping GPO that is still not working, written up as an open case | [INC-AD-004](tickets/gpo-drive-mapping-not-applying.md), [Stage 10](#10-department-drive-mapping-inc-ad-004-unresolved) |
+| Writing tickets with a root cause, a fix and a verification step | INC-AD-001 to 003 |
+| Writing up an unresolved problem honestly: what was checked, what was found, what is unknown | INC-AD-004 |
 
 ## Help Desk tickets
 
-Each ticket is a simulated incident: the fault was introduced on purpose so the troubleshooting could be practiced and documented.
+INC-AD-001 to INC-AD-003 are simulated incidents: the fault was introduced on purpose so the troubleshooting could be practiced and documented. INC-AD-004 is different. It is a real failure met while building drive mapping, and it is **still unresolved**.
 
 | ID | Symptom | Root cause | Tools used |
 | --- | --- | --- | --- |
 | [INC-AD-001](tickets/account-lockout-sarah-johnson.md) | "I can't sign in. My account is locked." | Failed sign-ins exceeded the lockout threshold (5 attempts) | ADUC, Group Policy Management, `runas`, `whoami` |
 | [INC-AD-002](tickets/shared-folder-access-sarah-johnson.md) | "I can open the HR folder but can't save a file." | Share permission was Read; NTFS allowed Modify; the stricter one wins | `whoami`, `Get-ADGroupMember`, `icacls`, `Get-SmbShareAccess`, `Grant-SmbShareAccess` |
 | [INC-AD-003](tickets/group-policy-not-applying.md) | "The workstation is missing its security policy." | The GPO's link to the Workstations OU was disabled | `gpupdate /force`, `gpresult /r`, Group Policy Management |
+| [INC-AD-004](tickets/gpo-drive-mapping-not-applying.md) (unresolved) | "My department drive did not map." | Not determined. The user policy refresh fails with an access-denied error (`0x5`) | `gpupdate`, `gpresult`, `nltest`, `Get-WinEvent`, Group Policy Management |
 
 More detail on every problem hit during the lab, including the ones that were not full tickets, is in [`troubleshooting.md`](troubleshooting.md).
 
@@ -52,13 +55,14 @@ OUs:     IT, HR, Finance, Sales, Management, Service Accounts, Workstations
 Groups:  GG-IT-Users, GG-IT-Admins, GG-HR-Users, GG-Finance-Users,
          GG-Sales-Users, GG-Management-Users
 Users:   jsmith (IT), sjohnson (HR), mbrown (Finance), dwilson (Sales), rdavis (Management)
+GPOs:    Default Domain Policy, Workstation Security Policy, Department Drive Maps
 ```
 
 ---
 
 ## Build stages
 
-Each stage below shows one key screenshot. All 52 screenshots are in [`screenshots/`](screenshots/), grouped by stage in the order the work was done.
+Each stage below shows one key screenshot. All 56 screenshots are in [`screenshots/`](screenshots/), grouped by stage in the order the work was done.
 
 ### 1. Domain Controller
 
@@ -155,6 +159,22 @@ The link between Workstation Security Policy and the Workstations OU was disable
 
 Full ticket: [INC-AD-003](tickets/group-policy-not-applying.md)
 
+### 10. Department drive mapping (INC-AD-004, unresolved)
+
+A Group Policy Preferences GPO, **Department Drive Maps**, was built to map a drive for each department from `\\AD-DC01\CompanyData` when its users sign in (`H:` HR, `I:` IT, `F:` Finance, `S:` Sales, `M:` Management). It did not work, and it is not fixed. The user policy refresh for `sjohnson` fails with `User Policy Update Failed.`, and the Group Policy event log records access-denied errors (error code `0x5`).
+
+![gpupdate /target:user /force fails with User Policy Update Failed, gpresult reports no RSoP data, and nltest finds the Domain Controller](screenshots/10-gpo-drive-mapping-troubleshooting/05-user-gpupdate-failed-nltest-sysvol-netlogon.png)
+
+*`gpupdate /target:user /force` fails for `sjohnson` while `nltest` still finds the Domain Controller.*
+
+What is established, and what is not:
+
+* **Established:** DNS works, the Domain Controller can be found by domain name, and the HR share can be reached by its network path. The failure is in user policy processing.
+* **Not established:** the cause. A GPO permission finding (Read access without Apply Group Policy) is a lead, but it was not captured in a screenshot and was not confirmed by a fix and retest. SYSVOL access by domain name was not confirmed either.
+* **Not achieved:** no mapped drive was ever captured.
+
+Full ticket: [INC-AD-004](tickets/gpo-drive-mapping-not-applying.md)
+
 ---
 
 ## Limits of this lab
@@ -163,17 +183,18 @@ Full ticket: [INC-AD-003](tickets/group-policy-not-applying.md)
 * Only `GG-HR-Users` was given Change on the share, and access was tested from the client only as `sjohnson` (HR). Cross-department access from a client was not tested.
 * Group Policy results in INC-AD-003 are computer-scope, from one computer, run as the local `Administrator`. The settings inside the GPO were not re-tested.
 * In INC-AD-002 and INC-AD-003, one screenshot each was captured out of order or after the fix. The ticket evidence notes say which.
+* INC-AD-004 is unresolved. The Department Drive Maps GPO has not been shown to apply, no mapped drive was captured, and its screenshots are numbered in investigation order, not capture order.
 * Commands marked "not run" in the tickets are reference only and are not shown in any screenshot.
 
 ## Status
 
-This lab is ongoing and will continue to grow. New work is added as separate, documented stages and tickets, built on the existing domain.
+This lab is ongoing and will continue to grow. New work is added as separate, documented stages and tickets, built on the existing domain. Department drive mapping is documented as it stands: investigated, not yet fixed.
 
 ## Files
 
 | File | Purpose |
 | --- | --- |
-| [`tickets/`](tickets/) | The three Help Desk tickets, each with a root cause, fix and verification |
+| [`tickets/`](tickets/) | The four Help Desk tickets: three resolved, each with a root cause, fix and verification, and one open investigation (INC-AD-004) |
 | [`troubleshooting.md`](troubleshooting.md) | Every problem hit during the lab, with the lesson from each |
 | [`commands.md`](commands.md) | Command reference |
-| [`screenshots/`](screenshots/) | All 52 screenshots, in nine numbered stage folders |
+| [`screenshots/`](screenshots/) | All 56 screenshots, in ten numbered stage folders |
