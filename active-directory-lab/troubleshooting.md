@@ -1,6 +1,6 @@
 # Active Directory Lab — Troubleshooting
 
-Every problem investigated during the lab, with the cause and what it taught. The three simulated tickets are written up in full in [`tickets/`](tickets/); the others are short notes here.
+Every problem investigated during the lab, with the cause and what it taught. The four tickets (three resolved, one unresolved) are written up in full in [`tickets/`](tickets/); the others are short notes here.
 
 ## Summary
 
@@ -16,6 +16,7 @@ Every problem investigated during the lab, with the cause and what it taught. Th
 | 8 | Departments not fully separated | Inherited `BUILTIN\Users` entries on every folder | [Below](#8-inherited-permissions-weakened-folder-separation) |
 | 9 | User can open a share but not save (INC-AD-002) | Share permission Read, NTFS Modify | [Ticket](tickets/shared-folder-access-sarah-johnson.md) |
 | 10 | Policy missing on the workstation (INC-AD-003) | GPO link disabled | [Ticket](tickets/group-policy-not-applying.md) |
+| 11 | Department drive maps not appearing (INC-AD-004, unresolved) | Not determined: user policy refresh fails with access denied (`0x5`) | [Below](#11-department-drive-maps-not-applying-unresolved-inc-ad-004) |
 
 ## Method
 
@@ -105,6 +106,13 @@ The user's identity, group membership and NTFS permission were all correct. The 
 
 `gpupdate /force` worked, but `gpresult /r /scope computer` listed the GPO as filtered out with `Disabled (Link)`. Re-enabling the link fixed it. **Lesson:** `gpupdate` refreshes policy; `gpresult` shows what applied and why not. Check a GPO's link and scope, not only its settings. Full write-up: [ticket](tickets/group-policy-not-applying.md).
 
+## 11. Department drive maps not applying: unresolved (INC-AD-004)
+
+**Symptom:** the drives that the Department Drive Maps GPO should map did not appear, and `gpupdate /target:user /force` for `sjohnson` failed with `User Policy Update Failed.`
+**Checked:** DNS and Domain Controller discovery (both worked), the HR share by its network path (reachable), `gpresult` for the user (no RSoP data), and the Group Policy event log (event 7320, error code `0x5`, access denied), repeated over several days. Evidence: [`10-gpo-drive-mapping-troubleshooting/`](screenshots/10-gpo-drive-mapping-troubleshooting/).
+**Not established:** the cause. A GPO permission lead (Read without Apply Group Policy) was seen but not captured in a screenshot and not confirmed by a fix and retest. SYSVOL access by domain name was not confirmed either: the one pictured test returned `False`, possibly because of the path typed.
+**Lesson:** a reachable share does not mean Group Policy will map it, so test the two layers separately. When a problem is not solved, stop repeating the same test and write down what was ruled in, what was ruled out, and what was never captured. Full write-up: [ticket](tickets/gpo-drive-mapping-not-applying.md).
+
 ---
 
 ## Lessons in one list
@@ -119,3 +127,5 @@ The user's identity, group membership and NTFS permission were all correct. The 
 8. Read the full ACL, not just your own change.
 9. Over SMB, check both the share and NTFS layers.
 10. Check the GPO link, not only its settings.
+11. A reachable share does not mean Group Policy will apply. Test the two separately.
+12. Document an unresolved problem as unresolved: what was checked, what was found, and what is still unknown.
