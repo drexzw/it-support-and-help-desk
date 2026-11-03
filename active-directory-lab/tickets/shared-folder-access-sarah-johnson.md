@@ -13,6 +13,8 @@
 
 ---
 
+> **Environment origin:** the domain, the `sjohnson` account and the client are built in [README stages 1 to 4](../README.md#build-stages), and the department folders and their group permissions in [README stage 7](../README.md#7-department-folder-permissions-ntfs). The `CompanyData` share is created in Step 3 below. Adding `sjohnson` to `GG-HR-Users` is verified in Step 2, but the step itself was not captured (**not pictured**).
+
 ## 1. User Report
 
 **User:** Sarah Johnson (HR)
