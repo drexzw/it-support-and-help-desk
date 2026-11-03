@@ -92,6 +92,8 @@ One global security group per department (`GG-<Dept>-Users`), plus `GG-IT-Admins
 
 *`GG-IT-Users` properties: group scope Global, group type Security.*
 
+Pictured here: `GG-IT-Users` and `jsmith`. The other groups and users are used and verified in later stages (for example `GG-HR-Users` and `sjohnson` in stage 8), but creating them was not captured (**not pictured**).
+
 More: [`screenshots/03-users-and-groups/`](screenshots/03-users-and-groups/)
 
 ### 4. Client domain join
@@ -120,6 +122,8 @@ Two accuracy notes:
 ### 6. Account lockout (INC-AD-001)
 
 A lockout was reproduced with repeated `runas` attempts and a wrong password, confirmed in ADUC, fixed with the **Unlock account** checkbox, and verified with `runas` and `whoami`. The ticket also lists what a technician would check in production before simply unlocking, such as stale saved credentials or mapped drives.
+
+The lockout values (5 attempts, 5-minute duration, 1-minute reset) come from the Default Domain Policy ([screenshot](screenshots/06-account-lockout-policy/02-account-lockout-policy-settings.png)). Setting them, and creating `sjohnson`, were not captured (**not pictured**).
 
 ![ADUC Account tab showing the account is currently locked out](screenshots/06-account-lockout-policy/04-account-lockout-confirmation-aduc.png)
 
@@ -172,6 +176,8 @@ What is established, and what is not:
 * **Established:** DNS works, the Domain Controller can be found by domain name, and the HR share can be reached by its network path. The failure is in user policy processing.
 * **Not established:** the cause. A GPO permission finding (Read access without Apply Group Policy) is a lead, but it was not captured in a screenshot and was not confirmed by a fix and retest. SYSVOL access by domain name was not confirmed either.
 * **Not achieved:** no mapped drive was ever captured.
+
+The ticket also shows how the GPO was built: linking it to an OU, item-level targeting for the HR drive, and the GPO's details.
 
 Full ticket: [INC-AD-004](tickets/gpo-drive-mapping-not-applying.md)
 
