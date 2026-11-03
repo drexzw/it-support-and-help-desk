@@ -14,6 +14,8 @@
 
 ---
 
+> **Environment origin:** `Workstation Security Policy` was created and linked to the Workstations OU in [README stage 5](../README.md#5-group-policy). The client joined the domain and landed in that OU in README stages 2 and 4. Step 3 below records the baseline before the fault.
+
 ## 1. Reported Issue
 
 The workstation was reported to be missing its expected security policy.
