@@ -13,6 +13,8 @@
 
 ---
 
+> **Environment origin:** the domain, the `sjohnson` account and the client domain join are built in [README stages 1 to 4](../README.md#build-stages). The lockout values (threshold 5, duration 5 minutes, reset counter 1 minute) are read from the Default Domain Policy in Section 2. Setting those values, and creating the `sjohnson` account, were not captured (**not pictured**).
+
 ## 1. User Report
 
 **User:** Sarah Johnson
