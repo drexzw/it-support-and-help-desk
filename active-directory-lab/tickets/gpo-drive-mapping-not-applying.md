@@ -39,7 +39,23 @@ One Group Policy Preferences GPO, **Department Drive Maps**, was meant to map a 
 
 *Department Drive Maps: links enabled on the domain and the five department OUs, and the five drive items with their paths.*
 
-Not pictured: how each drive was limited to its own department, and the GPO's Security Filtering list and permissions (part of that window is covered by the editor window in this screenshot).
+### How the GPO was built
+
+The GPO was created in Group Policy Management on `AD-DC01`, the five drive items were added under User Configuration > Preferences > Windows Settings > Drive Maps, and the GPO was linked to the domain and to each department OU. The share and folders it points to were built earlier ([README stages 7 and 8](../README.md#7-department-folder-permissions-ntfs)), and `sjohnson` is in `GG-HR-Users` ([INC-AD-002](shared-folder-access-sarah-johnson.md)).
+
+![The Select GPO dialog on the IT OU, listing Department Drive Maps next to the default policies and Workstation Security Policy.](../screenshots/10-gpo-drive-mapping-troubleshooting/build-01-link-gpo-to-it-ou.png)
+
+*Linking the GPO: the Select GPO dialog on the IT OU, with Department Drive Maps selected.*
+
+![The H: drive item's Common tab with item-level targeting enabled, and the Targeting Editor showing the user must be a member of DREXZW\GG-HR-Users.](../screenshots/10-gpo-drive-mapping-troubleshooting/build-02-item-level-targeting-hr.png)
+
+*Targeting: the `H:` item uses item-level targeting, so only members of `DREXZW\GG-HR-Users` should get it.*
+
+![Group Policy Management Details tab for Department Drive Maps: created 10/16/2026 7:09:35 PM, owner Domain Admins, user version 32 in both AD and SYSVOL, GPO status Enabled.](../screenshots/10-gpo-drive-mapping-troubleshooting/build-03-gpo-details-created-and-versions.png)
+
+*GPO details: created `10/16/2026 7:09:35 PM`, owner Domain Admins, user version 32 in both AD and SYSVOL.*
+
+Not pictured: the targeting for the other four drive items (only the HR item is shown), and the GPO's Security Filtering list and permissions (part of that window is covered by the editor window in the first screenshot above).
 
 ---
 
@@ -237,7 +253,7 @@ These were **not run** and are not shown in any screenshot.
 ## 11. Evidence Notes
 
 * Screenshots are numbered in investigation order, not capture order. Captured order: 02, 03, 04 (October 16), then 06 and 05 (October 19, in that order), then 01 and 07 (October 21).
-* Screenshots 02 and 03 are baselines taken before the GPO was created, judging from file times and the GPO's creation time in Group Policy Management (that creation time is not in the kept screenshots). They are not failure evidence. Screenshot 04, taken later the same day, is the first failure evidence.
+* Screenshots 02 and 03 are baselines taken before the GPO was created, judging from file times and the GPO's creation time (`10/16/2026 7:09:35 PM`, shown in `build-03`). They are not failure evidence. Screenshot 04, taken later the same day, is the first failure evidence.
 * Event-log timestamps are server time and run about seven hours ahead of the screenshot file times, which are local. This is judged from matching events to file times.
 * The `Get-PSDrive` output in screenshot 03 shows only `C:`, but it is not used as failure evidence because of the point above.
 
@@ -253,7 +269,7 @@ Parts of the investigation that were done or observed but have no kept screensho
 * SYSVOL failing by IP address while working by name.
 * SYSVOL reachable by domain name (the one pictured test returned `False`).
 * The GPO permission findings (Read without Apply Group Policy).
-* How each drive map was targeted to its department.
+* How the other four drive maps were targeted to their departments (only the HR item is pictured).
 
 ---
 
@@ -285,6 +301,9 @@ Supporting screenshots are stored in:
 | Step | Screenshot |
 |---|---|
 | GPO links and drive map items | [`01-department-drive-maps-gpo-settings.png`](../screenshots/10-gpo-drive-mapping-troubleshooting/01-department-drive-maps-gpo-settings.png) |
+| Linking the GPO to an OU | [`build-01-link-gpo-to-it-ou.png`](../screenshots/10-gpo-drive-mapping-troubleshooting/build-01-link-gpo-to-it-ou.png) |
+| Item-level targeting (HR item) | [`build-02-item-level-targeting-hr.png`](../screenshots/10-gpo-drive-mapping-troubleshooting/build-02-item-level-targeting-hr.png) |
+| GPO details: created, versions | [`build-03-gpo-details-created-and-versions.png`](../screenshots/10-gpo-drive-mapping-troubleshooting/build-03-gpo-details-created-and-versions.png) |
 | Baseline: identity and DNS | [`02-client-identity-and-dns-baseline.png`](../screenshots/10-gpo-drive-mapping-troubleshooting/02-client-identity-and-dns-baseline.png) |
 | Baseline: share reachable | [`03-share-reachable-baseline.png`](../screenshots/10-gpo-drive-mapping-troubleshooting/03-share-reachable-baseline.png) |
 | First symptom: no RSoP data, no mapped drives | [`04-no-rsop-data-and-no-mapped-drives.png`](../screenshots/10-gpo-drive-mapping-troubleshooting/04-no-rsop-data-and-no-mapped-drives.png) |
